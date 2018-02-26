@@ -1,0 +1,8 @@
+required = [
+    "github.com/alecthomas/gometalinter",
+    "k8s.io/code-generator/cmd/deepcopy-gen",
+]
+
+[[constraint]]
+  name = "k8s.io/apimachinery"
+  version = "v1.9.3"
