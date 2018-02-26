@@ -1,0 +1,59 @@
+apiVersion: hglnr.io/v1alpha1
+kind: VersionedMicroservice
+metadata:
+  labels:
+    service: hello
+    component: world
+  name: hello-world
+spec:
+  availability:
+    replicas:
+      count: 2
+    minAvailable: 1
+    maxUnavailable: 1
+    affinity:
+      multiHost:
+        weight: 100
+      multiZone:
+        weight: 90
+    deploymentStrategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+  network:
+    ports:
+    - name: headless
+      externalPort: 80
+      internalPort: 8080
+    dns:
+    - hostname: hello-world.demo.cool
+      ttl: 10
+      tls: true
+      port: headless
+  volumes:
+  - name: jwt-public
+    emptyDir: {}
+  containers:
+  - name: api
+    image: hglnrio/hello-world:latest
+    imagePullPolicy: Never
+    env:
+    - name: PORT
+      value: 8080
+    readinessProbe:
+      httpGet:
+        path: /_healthz
+        port: 8080
+        initialDelaySeconds: 3
+        periodSeconds: 3
+    livenessProbe:
+      httpGet:
+        path: /_healthz
+        port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 3
+    resources: {}
+    volumeMounts:
+    - name: jwt-public
+      mountPath: /jwt
+      readOnly: true

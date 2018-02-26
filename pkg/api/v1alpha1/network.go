@@ -8,14 +8,13 @@ type Network struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec NetworkSpec `json:"spec"`
+	Spec *NetworkSpec `json:"spec"`
 }
 
 // NetworkSpec describes the specification for Network.
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type NetworkSpec struct {
-	Ports []NetworkPort `json:"ports"`
-	DNS   []NetworkDNS  `json:"dns"`
+	Ports []*NetworkPort `json:"ports"`
+	DNS   []*NetworkDNS  `json:"dns"`
 }
 
 // NetworkPort describes a port that is exposed for a given service.

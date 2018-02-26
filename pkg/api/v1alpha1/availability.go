@@ -13,11 +13,10 @@ type Availability struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec AvailabilitySpec `json:"spec"`
+	Spec *AvailabilitySpec `json:"spec"`
 }
 
 // AvailabilitySpec is the specification for Availability.
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type AvailabilitySpec struct {
 	// Number of desired replicas of the service.
 	Replicas int32 `json:"count"`

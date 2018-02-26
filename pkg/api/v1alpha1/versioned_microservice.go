@@ -12,7 +12,7 @@ type VersionedMicroservice struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec VersionedMicroserviceSpec `json:"spec"`
+	Spec *VersionedMicroserviceSpec `json:"spec"`
 }
 
 // VersionedMicroserviceList is a list of VersionedMicroservices.
@@ -25,10 +25,9 @@ type VersionedMicroserviceList struct {
 
 // VersionedMicroserviceSpec represents the specification for a
 // VersionedMicroservice.
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type VersionedMicroserviceSpec struct {
-	Availability AvailabilitySpec `json:"availability,omitempty"`
-	Network      NetworkSpec      `json:"network,omitempty"`
-	Volumes      []core.Volume    `json:"volumes,omitempty"`
-	Containers   []core.Container `json:"containers"`
+	Availability *AvailabilitySpec `json:"availability,omitempty"`
+	Network      *NetworkSpec      `json:"network,omitempty"`
+	Volumes      []core.Volume     `json:"volumes,omitempty"`
+	Containers   []core.Container  `json:"containers"`
 }
