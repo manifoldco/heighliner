@@ -16,11 +16,19 @@ func GetDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, er
 		availability = &v1alpha1.DefaultAvailabilitySpec
 	}
 
+	labels := crd.Labels
+	labels["hglnr.io/service"] = crd.Name
+
+	affinity := availability.Affinity
+	if affinity == nil {
+		affinity = DefaultAffinity("hglnr.io/service", crd.Name)
+	}
+
 	dpl := &v1beta1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        crd.Name,
 			Namespace:   crd.Namespace,
-			Labels:      crd.Labels,
+			Labels:      labels,
 			Annotations: k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd),
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(
@@ -33,19 +41,20 @@ func GetDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, er
 			Replicas: availability.Replicas,
 			Strategy: availability.DeploymentStrategy,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: crd.Labels,
+				MatchLabels: labels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        crd.Name,
 					Namespace:   crd.Namespace,
-					Labels:      crd.Labels,
+					Labels:      labels,
 					Annotations: k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd),
 				},
 				Spec: corev1.PodSpec{
 					// TODO(jelmer) make this configurable through a security
 					// policy
 					AutomountServiceAccountToken: func(b bool) *bool { return &b }(false),
+					Affinity:                     affinity,
 					RestartPolicy:                availability.RestartPolicy,
 					Containers:                   crd.Spec.Containers,
 					Volumes:                      crd.Spec.Volumes,

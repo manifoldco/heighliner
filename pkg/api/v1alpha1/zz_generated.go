@@ -91,7 +91,15 @@ func (in *AvailabilitySpec) DeepCopyInto(out *AvailabilitySpec) {
 	out.MinAvailable = in.MinAvailable
 	out.MaxUnavailable = in.MaxUnavailable
 	in.DeploymentStrategy.DeepCopyInto(&out.DeploymentStrategy)
-	in.Affinity.DeepCopyInto(&out.Affinity)
+	if in.Affinity != nil {
+		in, out := &in.Affinity, &out.Affinity
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(v1.Affinity)
+			(*in).DeepCopyInto(*out)
+		}
+	}
 	return
 }
 

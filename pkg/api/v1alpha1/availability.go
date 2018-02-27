@@ -42,7 +42,7 @@ type AvailabilitySpec struct {
 	DeploymentStrategy v1beta1.DeploymentStrategy `json:"deploymentStrategy,omitempty"`
 
 	// The microservice's scheduling constraints.
-	Affinity corev1.Affinity `json:"affinity,omitempty"`
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 }
 
 // DefaultAvailabilitySpec is the default availability spec that will be used
