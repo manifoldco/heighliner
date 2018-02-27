@@ -2,7 +2,7 @@ apiVersion: hglnr.io/v1alpha1
 kind: VersionedMicroservice
 metadata:
   labels:
-    service: hello
+    service: hello-minimum
     component: world
   name: hello-world-minimum
 spec:
@@ -17,7 +17,7 @@ spec:
       tls: true
       port: headless
   containers:
-  - name: api
+  - name: hello-world
     image: hglnrio/hello-world:latest
     imagePullPolicy: Never
     readinessProbe:
