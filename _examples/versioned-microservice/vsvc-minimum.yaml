@@ -4,7 +4,7 @@ metadata:
   labels:
     service: hello
     component: world
-  name: hello-world
+  name: hello-world-minimum
 spec:
   network:
     ports:
@@ -16,16 +16,10 @@ spec:
       ttl: 10
       tls: true
       port: headless
-  volumes:
-  - name: jwt-public
-    emptyDir: {}
   containers:
   - name: api
     image: hglnrio/hello-world:latest
     imagePullPolicy: Never
-    env:
-    - name: PORT
-      value: "8080"
     readinessProbe:
       httpGet:
         path: /_healthz
@@ -38,8 +32,3 @@ spec:
         port: 8080
         initialDelaySeconds: 5
         periodSeconds: 3
-    resources: {}
-    volumeMounts:
-    - name: jwt-public
-      mountPath: /jwt
-      readOnly: true
