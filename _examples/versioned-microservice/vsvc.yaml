@@ -6,20 +6,6 @@ metadata:
     component: world
   name: hello-world
 spec:
-  availability:
-    replicas:
-      count: 2
-    minAvailable: 1
-    maxUnavailable: 1
-    affinity:
-      multiHost:
-        weight: 100
-      multiZone:
-        weight: 90
-    deploymentStrategy:
-      rollingUpdate:
-        maxSurge: 25%
-        maxUnavailable: 25%
   network:
     ports:
     - name: headless
@@ -39,7 +25,7 @@ spec:
     imagePullPolicy: Never
     env:
     - name: PORT
-      value: 8080
+      value: "8080"
     readinessProbe:
       httpGet:
         path: /_healthz

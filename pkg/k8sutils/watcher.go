@@ -8,6 +8,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+// ResyncPeriod defines the duration which we want to wait to re-validate the
+// state of our cluster.
+var ResyncPeriod = 10 * time.Second
+
 // CRDWatcher watches a CRD for the desired vs actual state.
 type CRDWatcher struct {
 	rc        *rest.RESTClient
@@ -35,11 +39,10 @@ func (w *CRDWatcher) Watch(done <-chan struct{}) error {
 		fields.Everything(),
 	)
 
-	resyncPeriod := 10 * time.Second
 	_, controller := cache.NewInformer(
 		source,
 		w.resource.Object,
-		resyncPeriod,
+		ResyncPeriod,
 		w.handler,
 	)
 

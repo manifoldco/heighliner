@@ -34,17 +34,7 @@ func (c CustomResource) FullName() string {
 
 // Kind returns the Type Name of the CR Object.
 func (c CustomResource) Kind() string {
-	val := reflect.ValueOf(c.Object)
-
-	name := ""
-	switch val.Kind() {
-	case reflect.Ptr:
-		name = val.Elem().Type().Name()
-	default:
-		name = val.Type().Name()
-	}
-
-	return name
+	return ObjectName(c.Object)
 }
 
 // Definition returns the CustomResourceDefinition that is linked to this
@@ -123,4 +113,19 @@ func waitForCRD(cs clientset.Interface, fullName string, crd *apiextv1beta1.Cust
 	}
 
 	return err
+}
+
+// ObjectName returns the CamelCased name of a given object.
+func ObjectName(object interface{}) string {
+	val := reflect.ValueOf(object)
+
+	name := ""
+	switch val.Kind() {
+	case reflect.Ptr:
+		name = val.Elem().Type().Name()
+	default:
+		name = val.Type().Name()
+	}
+
+	return name
 }

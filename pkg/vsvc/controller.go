@@ -82,6 +82,16 @@ func (c *Controller) onAdd(obj interface{}) {
 	}
 
 	log.Printf("Deploying new application %s", vsvc.Name)
+	dpl, err := GetDeployment(vsvc)
+	if err != nil {
+		log.Printf("Could not create Deployment: %s", err)
+		return
+	}
+
+	if _, err := c.cs.Extensions().Deployments(vsvc.Namespace).Create(dpl); err != nil {
+		log.Printf("Error deploying application '%s': %s", vsvc.Name, err)
+		return
+	}
 }
 
 func (c *Controller) onUpdate(old, new interface{}) {
@@ -98,6 +108,16 @@ func (c *Controller) onUpdate(old, new interface{}) {
 	}
 
 	log.Printf("Updating application %s", ovsvc.Name)
+	dpl, err := GetDeployment(ovsvc)
+	if err != nil {
+		log.Printf("Could not create Deployment: %s", err)
+		return
+	}
+
+	if _, err := c.cs.Extensions().Deployments(ovsvc.Namespace).Update(dpl); err != nil {
+		log.Printf("Error updating application '%s': %s", ovsvc.Name, err)
+		return
+	}
 }
 
 func (c *Controller) onDelete(obj interface{}) {

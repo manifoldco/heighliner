@@ -1,6 +1,8 @@
 package k8sutils
 
 import (
+	"flag"
+
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -53,4 +55,8 @@ func RESTClient(cfg *rest.Config, sgv *schema.GroupVersion, schemeBuilders ...Sc
 	}
 
 	return rest.RESTClientFor(&config)
+}
+
+func init() {
+	flag.Parse()
 }

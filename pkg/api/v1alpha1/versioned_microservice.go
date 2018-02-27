@@ -1,8 +1,8 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/apis/core"
 )
 
 // VersionedMicroservice represents the combined state of different components
@@ -26,8 +26,8 @@ type VersionedMicroserviceList struct {
 // VersionedMicroserviceSpec represents the specification for a
 // VersionedMicroservice.
 type VersionedMicroserviceSpec struct {
-	Availability *AvailabilitySpec `json:"availability,omitempty"`
-	Network      *NetworkSpec      `json:"network,omitempty"`
-	Volumes      []core.Volume     `json:"volumes,omitempty"`
-	Containers   []core.Container  `json:"containers"`
+	Availability *AvailabilitySpec  `json:"availability,omitempty"`
+	Network      *NetworkSpec       `json:"network,omitempty"`
+	Volumes      []corev1.Volume    `json:"volumes,omitempty"`
+	Containers   []corev1.Container `json:"containers"`
 }
