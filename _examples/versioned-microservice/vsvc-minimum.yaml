@@ -1,0 +1,34 @@
+apiVersion: hglnr.io/v1alpha1
+kind: VersionedMicroservice
+metadata:
+  labels:
+    service: hello-minimum
+    component: world
+  name: hello-world-minimum
+spec:
+  network:
+    ports:
+    - name: headless
+      externalPort: 80
+      internalPort: 8080
+    dns:
+    - hostname: hello-world.demo.cool
+      ttl: 10
+      tls: true
+      port: headless
+  containers:
+  - name: hello-world
+    image: hglnrio/hello-world:latest
+    imagePullPolicy: Never
+    readinessProbe:
+      httpGet:
+        path: /_healthz
+        port: 8080
+        initialDelaySeconds: 3
+        periodSeconds: 3
+    livenessProbe:
+      httpGet:
+        path: /_healthz
+        port: 8080
+        initialDelaySeconds: 5
+        periodSeconds: 3
