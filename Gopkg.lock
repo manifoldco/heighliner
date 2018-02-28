@@ -132,6 +132,12 @@
   version = "v1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/jelmersnoeck/kubekit"
+  packages = ["."]
+  revision = "4034b33cdda3a42f825ac9df23d04dd739305a87"
+
+[[projects]]
   name = "github.com/jessevdk/go-flags"
   packages = ["."]
   revision = "96dc06278ce32a0e9d957d590bb987c81ee66407"
@@ -423,6 +429,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "69e479a0a34f05e83cd3c0ca3dae565ba5e4876710fc4db68bebb42463a3d297"
+  inputs-digest = "28c4d2ba88a0db3955a45ee4a82bc985ded37e136ced2ef64ac60775b1a574ee"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -1,6 +1,7 @@
 package vsvc
 
 import (
+	"github.com/jelmersnoeck/kubekit"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
@@ -33,7 +34,7 @@ func GetDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, er
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(
 					crd,
-					v1alpha1.SchemeGroupVersion.WithKind(k8sutils.ObjectName(crd)),
+					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(crd)),
 				),
 			},
 		},

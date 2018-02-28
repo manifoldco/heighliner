@@ -8,8 +8,8 @@ import (
 	"syscall"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
-	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
+	"github.com/jelmersnoeck/kubekit"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -26,7 +26,7 @@ type Controller struct {
 
 // NewController returns a new VersionedMicroservice Controller.
 func NewController(cfg *rest.Config, cs kubernetes.Interface, namespace string) (*Controller, error) {
-	rc, err := k8sutils.RESTClient(cfg, &v1alpha1.SchemeGroupVersion, AddToScheme)
+	rc, err := kubekit.RESTClient(cfg, &v1alpha1.SchemeGroupVersion, AddToScheme)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (c *Controller) Run() error {
 }
 
 func (c *Controller) run(ctx context.Context) {
-	watcher := k8sutils.NewCRDWatcher(
+	watcher := kubekit.NewWatcher(
 		c.rc,
 		c.namespace,
 		&CustomResource,
@@ -71,7 +71,7 @@ func (c *Controller) run(ctx context.Context) {
 		},
 	)
 
-	go watcher.Watch(ctx.Done())
+	go watcher.Run(ctx.Done())
 }
 
 func (c *Controller) onAdd(obj interface{}) {
