@@ -8,12 +8,14 @@ ci: lint test
 # Bootstrapping for base golang package deps
 #################################################
 BOOTSTRAP=\
-	github.com/golang/dep/cmd/dep
+	github.com/golang/dep/cmd/dep \
+	github.com/alecthomas/gometalinter
 
 $(BOOTSTRAP):
 	go get -u $@
 
 bootstrap: $(BOOTSTRAP)
+	gometalinter --install
 
 vendor: Gopkg.lock
 	dep ensure -v -vendor-only
@@ -39,12 +41,9 @@ METALINT=gometalinter --tests --disable-all --vendor --deadline=5m -e "zz_.*\.go
 
 test: vendor
 
-metalinter:
-	gometalinter --install
-
 lint: $(LINTERS)
 
-$(LINTERS): metalinter vendor
+$(LINTERS): vendor
 	$(METALINT) $@
 
 .PHONY: $(LINTERS) test lint
