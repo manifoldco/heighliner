@@ -119,7 +119,7 @@ func waitForCRD(cs clientset.Interface, fullName string, crd *apiextv1beta1.Cust
 func ObjectName(object interface{}) string {
 	val := reflect.ValueOf(object)
 
-	name := ""
+	var name string
 	switch val.Kind() {
 	case reflect.Ptr:
 		name = val.Elem().Type().Name()
