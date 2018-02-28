@@ -81,15 +81,27 @@ func (c *Controller) onAdd(obj interface{}) {
 		return
 	}
 
-	log.Printf("Deploying new application %s", vsvc.Name)
-	dpl, err := GetDeployment(vsvc)
+	log.Printf("Creating application configuration for %s", vsvc.Name)
+	dpl, err := getDeployment(vsvc)
 	if err != nil {
-		log.Printf("Could not create Deployment: %s", err)
+		log.Printf("Could not configure Deployment: %s", err)
 		return
 	}
 
+	svc, err := getService(vsvc)
+	if err != nil {
+		log.Printf("Could not configure Service: %s", err)
+		return
+	}
+
+	log.Printf("Deploying new application %s", vsvc.Name)
 	if _, err := c.cs.Extensions().Deployments(vsvc.Namespace).Create(dpl); err != nil {
-		log.Printf("Error deploying application '%s': %s", vsvc.Name, err)
+		log.Printf("Error creating deployment '%s': %s", vsvc.Name, err)
+		return
+	}
+
+	if _, err := c.cs.CoreV1().Services(vsvc.Namespace).Create(svc); err != nil {
+		log.Printf("Error creating service '%s': %s", vsvc.Name, err)
 		return
 	}
 }
@@ -101,21 +113,32 @@ func (c *Controller) onUpdate(old, new interface{}) {
 		return
 	}
 
-	_, ok = old.(*v1alpha1.VersionedMicroservice)
+	nvsvc, ok := old.(*v1alpha1.VersionedMicroservice)
 	if !ok {
 		log.Printf("Expected object to be of type `v1alpha1.VersionedMicroservice`")
 		return
 	}
 
-	log.Printf("Updating application %s", ovsvc.Name)
-	dpl, err := GetDeployment(ovsvc)
+	dpl, err := getDeployment(nvsvc)
 	if err != nil {
-		log.Printf("Could not create Deployment: %s", err)
+		log.Printf("Could not configure Deployment: %s", err)
 		return
 	}
 
-	if _, err := c.cs.Extensions().Deployments(ovsvc.Namespace).Update(dpl); err != nil {
-		log.Printf("Error updating application '%s': %s", ovsvc.Name, err)
+	svc, err := getService(nvsvc)
+	if err != nil {
+		log.Printf("Could not configure Service: %s", err)
+		return
+	}
+
+	log.Printf("Updating application %s", nvsvc.Name)
+	if _, err := c.cs.Extensions().Deployments(nvsvc.Namespace).Update(dpl); err != nil {
+		log.Printf("Error updating deployment '%s': %s", ovsvc.Name, err)
+		return
+	}
+
+	if _, err := c.cs.CoreV1().Services(nvsvc.Namespace).Update(svc); err != nil {
+		log.Printf("Error creating service '%s': %s", nvsvc.Name, err)
 		return
 	}
 }

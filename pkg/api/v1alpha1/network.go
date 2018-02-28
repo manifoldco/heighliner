@@ -13,8 +13,8 @@ type Network struct {
 
 // NetworkSpec describes the specification for Network.
 type NetworkSpec struct {
-	Ports []*NetworkPort `json:"ports"`
-	DNS   []*NetworkDNS  `json:"dns"`
+	Ports []NetworkPort `json:"ports"`
+	DNS   []NetworkDNS  `json:"dns"`
 }
 
 // NetworkPort describes a port that is exposed for a given service.
