@@ -4,9 +4,10 @@ import (
 	"log"
 	"os"
 
-	flags "github.com/jessevdk/go-flags"
-	"github.com/manifoldco/heighliner/pkg/k8sutils"
 	"github.com/manifoldco/heighliner/pkg/vsvc"
+
+	"github.com/jelmersnoeck/kubekit"
+	flags "github.com/jessevdk/go-flags"
 
 	"github.com/spf13/cobra"
 )
@@ -29,13 +30,13 @@ func vsvcCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cfg, cs, acs, err := k8sutils.Clientset()
+	cfg, cs, acs, err := kubekit.InClusterClientsets()
 	if err != nil {
 		log.Printf("Could not get Clientset: %s\n", err)
 		return err
 	}
 
-	if err := k8sutils.CreateCRD(acs, vsvc.CustomResource); err != nil {
+	if err := kubekit.CreateCRD(acs, vsvc.CustomResource); err != nil {
 		log.Printf("Could not create CRD: %s\n", err)
 		return err
 	}

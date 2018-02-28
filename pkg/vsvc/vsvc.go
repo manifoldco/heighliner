@@ -3,8 +3,8 @@ package vsvc
 
 import (
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
-	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
+	"github.com/jelmersnoeck/kubekit"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
@@ -19,7 +19,7 @@ const (
 
 var (
 	// CustomResource describes the CRD configuration for the VersionedMicroservice CRD.
-	CustomResource = k8sutils.CustomResource{
+	CustomResource = kubekit.CustomResource{
 		Name:    CustomResourceName,
 		Plural:  CustomResourceNamePlural,
 		Group:   v1alpha1.GroupName,
