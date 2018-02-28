@@ -40,6 +40,7 @@ METALINT=gometalinter --tests --disable-all --vendor --deadline=5m -e "zz_.*\.go
 	 ./... --enable
 
 test: vendor
+	CGO_ENABLED=0 go test -v ./...
 
 lint: $(LINTERS)
 
