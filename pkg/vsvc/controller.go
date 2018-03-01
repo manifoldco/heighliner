@@ -79,25 +79,44 @@ func (c *Controller) onAdd(obj interface{}) {
 
 	dpl, err := getDeployment(vsvc)
 	if err != nil {
-		log.Printf("Could not configure Deployment: %s", err)
+		log.Printf("Could not configure Deployment for %s: %s", vsvc.Name, err)
 		return
 	}
 
 	svc, err := getService(vsvc)
 	if err != nil {
-		log.Printf("Could not configure Service: %s", err)
+		log.Printf("Could not configure Service for %s: %s", vsvc.Name, err)
+		return
+	}
+
+	ing, err := getIngress(vsvc)
+	if err != nil {
+		log.Printf("Could not configure Ingress for %s: %s", vsvc.Name, err)
 		return
 	}
 
 	log.Printf("Deploying new application %s", vsvc.Name)
 	if _, err := c.cs.Extensions().Deployments(vsvc.Namespace).Create(dpl); err != nil {
-		log.Printf("Error creating deployment '%s': %s", vsvc.Name, err)
+		log.Printf("Error creating Deployment for %s: %s", vsvc.Name, err)
 		return
 	}
 
-	if _, err := c.cs.CoreV1().Services(vsvc.Namespace).Create(svc); err != nil {
-		log.Printf("Error creating service '%s': %s", vsvc.Name, err)
-		return
+	if svc != nil {
+		if _, err := c.cs.CoreV1().Services(vsvc.Namespace).Create(svc); err != nil {
+			log.Printf("Error creating Service for %s: %s", vsvc.Name, err)
+			return
+		}
+	}
+
+	// This is a great example of why we need to look into using `runtime.Object`
+	// to send to the server. This way, we could just append data to a slice of
+	// objects and apply these, without having to add checks if these are
+	// present or not.
+	if ing != nil {
+		if _, err := c.cs.Extensions().Ingresses(vsvc.Namespace).Create(ing); err != nil {
+			log.Printf("Error creating Ingress for %s: %s", vsvc.Name, err)
+			return
+		}
 	}
 }
 

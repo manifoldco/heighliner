@@ -4,6 +4,7 @@ import (
 	"flag"
 
 	"github.com/jelmersnoeck/kubekit"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -17,6 +18,17 @@ func Annotations(ann map[string]string, version string, resource runtime.Object)
 	ann["hglnr.io/version"] = version
 	ann["hglnr.io/component"] = kubekit.TypeName(resource)
 	return ann
+}
+
+// Labels returns a new set of labels annotated with Heighliner specific
+// defaults.
+func Labels(labels map[string]string, m metav1.ObjectMeta) map[string]string {
+	if labels == nil {
+		labels = map[string]string{}
+	}
+
+	labels[LabelServiceKey] = m.Name
+	return labels
 }
 
 func init() {

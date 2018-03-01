@@ -42,9 +42,10 @@ spec:
       externalPort: 80
       internalPort: 8080
     dns:
-    - hostname: hello-world.demo.cool
+      hostname: hello-world.demo.cool
       ttl: 10
-      tls: true
+      disableTLS: false
+      TLSGroup: hello-world
       port: headless
   volumes:
   - name: jwt-public
