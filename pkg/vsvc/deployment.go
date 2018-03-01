@@ -10,15 +10,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// GetDeployment creates the Deployment Object for a VersionedMicroservice.
-func GetDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, error) {
+// getDeployment creates the Deployment Object for a VersionedMicroservice.
+func getDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, error) {
 	availability := crd.Spec.Availability
 	if availability == nil {
 		availability = &v1alpha1.DefaultAvailabilitySpec
 	}
 
 	labels := crd.Labels
-	labels["hglnr.io/service"] = crd.Name
+	labels[k8sutils.LabelServiceKey] = crd.Name
 
 	affinity := availability.Affinity
 	if affinity == nil {
