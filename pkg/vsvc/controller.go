@@ -107,40 +107,21 @@ func (c *Controller) onAdd(obj interface{}) {
 }
 
 func (c *Controller) onUpdate(old, new interface{}) {
-	ovsvc, ok := old.(*v1alpha1.VersionedMicroservice)
+	_, ok := old.(*v1alpha1.VersionedMicroservice)
 	if !ok {
 		log.Printf("Expected object to be of type `v1alpha1.VersionedMicroservice`")
 		return
 	}
 
-	nvsvc, ok := old.(*v1alpha1.VersionedMicroservice)
+	_, ok = old.(*v1alpha1.VersionedMicroservice)
 	if !ok {
 		log.Printf("Expected object to be of type `v1alpha1.VersionedMicroservice`")
 		return
 	}
 
-	dpl, err := getDeployment(nvsvc)
-	if err != nil {
-		log.Printf("Could not configure Deployment: %s", err)
-		return
-	}
-
-	svc, err := getService(nvsvc)
-	if err != nil {
-		log.Printf("Could not configure Service: %s", err)
-		return
-	}
-
-	log.Printf("Updating application %s", nvsvc.Name)
-	if _, err := c.cs.Extensions().Deployments(nvsvc.Namespace).Update(dpl); err != nil {
-		log.Printf("Error updating deployment '%s': %s", ovsvc.Name, err)
-		return
-	}
-
-	if _, err := c.cs.CoreV1().Services(nvsvc.Namespace).Update(svc); err != nil {
-		log.Printf("Error creating service '%s': %s", nvsvc.Name, err)
-		return
-	}
+	// Updates fail sometimes if we do it directly from here. We need to
+	// integrate with the ThreeWayMergeStrategy available in apimachinery and
+	// use the object mapper to allow patching the objects.
 }
 
 func (c *Controller) onDelete(obj interface{}) {
