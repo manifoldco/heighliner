@@ -58,7 +58,7 @@ func getServicePorts(networkPorts []v1alpha1.NetworkPort) ([]corev1.ServicePort,
 
 	for i, port := range networkPorts {
 		// TODO(jelmer): add validation, should potentially be done through
-		// an actua CRD validator.
+		// an actual CRD validator.
 		ports[i] = corev1.ServicePort{
 			Protocol:   corev1.ProtocolTCP,
 			Name:       port.Name,

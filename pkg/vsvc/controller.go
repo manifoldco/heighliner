@@ -75,13 +75,8 @@ func (c *Controller) run(ctx context.Context) {
 }
 
 func (c *Controller) onAdd(obj interface{}) {
-	vsvc, ok := obj.(*v1alpha1.VersionedMicroservice)
-	if !ok {
-		log.Printf("Expected object to be of type `v1alpha1.VersionedMicroservice`")
-		return
-	}
+	vsvc := obj.(*v1alpha1.VersionedMicroservice).DeepCopy()
 
-	log.Printf("Creating application configuration for %s", vsvc.Name)
 	dpl, err := getDeployment(vsvc)
 	if err != nil {
 		log.Printf("Could not configure Deployment: %s", err)
@@ -107,29 +102,12 @@ func (c *Controller) onAdd(obj interface{}) {
 }
 
 func (c *Controller) onUpdate(old, new interface{}) {
-	_, ok := old.(*v1alpha1.VersionedMicroservice)
-	if !ok {
-		log.Printf("Expected object to be of type `v1alpha1.VersionedMicroservice`")
-		return
-	}
-
-	_, ok = old.(*v1alpha1.VersionedMicroservice)
-	if !ok {
-		log.Printf("Expected object to be of type `v1alpha1.VersionedMicroservice`")
-		return
-	}
-
 	// Updates fail sometimes if we do it directly from here. We need to
 	// integrate with the ThreeWayMergeStrategy available in apimachinery and
 	// use the object mapper to allow patching the objects.
 }
 
 func (c *Controller) onDelete(obj interface{}) {
-	vsvc, ok := obj.(*v1alpha1.VersionedMicroservice)
-	if !ok {
-		log.Printf("Expected object to be of type `v1alpha1.VersionedMicroservice`")
-		return
-	}
-
+	vsvc := obj.(*v1alpha1.VersionedMicroservice).DeepCopy()
 	log.Printf("Deleting application %s", vsvc.Name)
 }
