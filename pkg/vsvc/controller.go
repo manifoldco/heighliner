@@ -10,6 +10,7 @@ import (
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 
 	"github.com/jelmersnoeck/kubekit"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -95,14 +96,20 @@ func (c *Controller) onAdd(obj interface{}) {
 		return
 	}
 
+	pdb, err := getPodDisruptionBudget(vsvc)
+	if err != nil {
+		log.Printf("Could not configure PodDisruptionBudget for %s: %s", vsvc.Name, err)
+		return
+	}
+
 	log.Printf("Deploying new application %s", vsvc.Name)
-	if _, err := c.cs.Extensions().Deployments(vsvc.Namespace).Create(dpl); err != nil {
+	if _, err := c.cs.Extensions().Deployments(vsvc.Namespace).Create(dpl); err != nil && !errors.IsAlreadyExists(err) {
 		log.Printf("Error creating Deployment for %s: %s", vsvc.Name, err)
 		return
 	}
 
 	if svc != nil {
-		if _, err := c.cs.CoreV1().Services(vsvc.Namespace).Create(svc); err != nil {
+		if _, err := c.cs.CoreV1().Services(vsvc.Namespace).Create(svc); err != nil && !errors.IsAlreadyExists(err) {
 			log.Printf("Error creating Service for %s: %s", vsvc.Name, err)
 			return
 		}
@@ -113,8 +120,15 @@ func (c *Controller) onAdd(obj interface{}) {
 	// objects and apply these, without having to add checks if these are
 	// present or not.
 	if ing != nil {
-		if _, err := c.cs.Extensions().Ingresses(vsvc.Namespace).Create(ing); err != nil {
+		if _, err := c.cs.Extensions().Ingresses(vsvc.Namespace).Create(ing); err != nil && !errors.IsAlreadyExists(err) {
 			log.Printf("Error creating Ingress for %s: %s", vsvc.Name, err)
+			return
+		}
+	}
+
+	if pdb != nil {
+		if _, err := c.cs.PolicyV1beta1().PodDisruptionBudgets(vsvc.Namespace).Create(pdb); err != nil && !errors.IsAlreadyExists(err) {
+			log.Printf("Error creating PodDisruptionBudget for %s: %s", vsvc.Name, err)
 			return
 		}
 	}
