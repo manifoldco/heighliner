@@ -13,7 +13,7 @@ type Availability struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec *AvailabilitySpec `json:"spec"`
+	Spec AvailabilitySpec `json:"spec"`
 }
 
 // AvailabilitySpec is the specification for Availability.

@@ -47,15 +47,7 @@ func (in *Availability) DeepCopyInto(out *Availability) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	if in.Spec != nil {
-		in, out := &in.Spec, &out.Spec
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(AvailabilitySpec)
-			(*in).DeepCopyInto(*out)
-		}
-	}
+	in.Spec.DeepCopyInto(&out.Spec)
 	return
 }
 
@@ -135,15 +127,7 @@ func (in *Network) DeepCopyInto(out *Network) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	if in.Spec != nil {
-		in, out := &in.Spec, &out.Spec
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(NetworkSpec)
-			(*in).DeepCopyInto(*out)
-		}
-	}
+	in.Spec.DeepCopyInto(&out.Spec)
 	return
 }
 
@@ -232,15 +216,7 @@ func (in *VersionedMicroservice) DeepCopyInto(out *VersionedMicroservice) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	if in.Spec != nil {
-		in, out := &in.Spec, &out.Spec
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(VersionedMicroserviceSpec)
-			(*in).DeepCopyInto(*out)
-		}
-	}
+	in.Spec.DeepCopyInto(&out.Spec)
 	return
 }
 

@@ -12,7 +12,7 @@ type VersionedMicroservice struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec *VersionedMicroserviceSpec `json:"spec"`
+	Spec VersionedMicroserviceSpec `json:"spec"`
 }
 
 // VersionedMicroserviceList is a list of VersionedMicroservices.

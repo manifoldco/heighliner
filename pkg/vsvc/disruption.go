@@ -1,6 +1,8 @@
 package vsvc
 
 import (
+	"errors"
+
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
@@ -8,6 +10,12 @@ import (
 	"k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+var (
+	// ErrMinMaxAvailabilitySet is used when the Availability Configuration has
+	// both MinAvailabe and MaxUnavailable set.
+	ErrMinMaxAvailabilitySet = errors.New("Can't have both MinAvailable and MaxUnavailable configured")
 )
 
 func getPodDisruptionBudget(crd *v1alpha1.VersionedMicroservice) (*v1beta1.PodDisruptionBudget, error) {
@@ -31,6 +39,11 @@ func getPodDisruptionBudget(crd *v1alpha1.VersionedMicroservice) (*v1beta1.PodDi
 	budget.Spec.Selector.MatchLabels[k8sutils.LabelServiceKey] = crd.Name
 	if crd.Spec.Availability != nil {
 		av := crd.Spec.Availability
+
+		if av.MinAvailable != nil && av.MaxUnavailable != nil {
+			return nil, ErrMinMaxAvailabilitySet
+		}
+
 		if av.MinAvailable != nil && av.MaxUnavailable == nil {
 			budget.Spec.MinAvailable = av.MinAvailable
 			budget.Spec.MaxUnavailable = nil
