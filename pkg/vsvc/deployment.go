@@ -1,10 +1,10 @@
 package vsvc
 
 import (
-	"github.com/jelmersnoeck/kubekit"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
+	"github.com/jelmersnoeck/kubekit"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,8 +17,8 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, er
 		availability = &v1alpha1.DefaultAvailabilitySpec
 	}
 
-	labels := crd.Labels
-	labels[k8sutils.LabelServiceKey] = crd.Name
+	labels := k8sutils.Labels(crd.Labels, crd.ObjectMeta)
+	annotations := k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd)
 
 	affinity := availability.Affinity
 	if affinity == nil {
@@ -30,7 +30,7 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, er
 			Name:        crd.Name,
 			Namespace:   crd.Namespace,
 			Labels:      labels,
-			Annotations: k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd),
+			Annotations: annotations,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(
 					crd,
@@ -49,7 +49,7 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, er
 					Name:        crd.Name,
 					Namespace:   crd.Namespace,
 					Labels:      labels,
-					Annotations: k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd),
+					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
 					// TODO(jelmer) make this configurable through a security
