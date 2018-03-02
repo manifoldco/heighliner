@@ -8,7 +8,7 @@ type Network struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec *NetworkSpec `json:"spec"`
+	Spec NetworkSpec `json:"spec"`
 }
 
 // NetworkSpec describes the specification for Network.

@@ -13,7 +13,7 @@ type Availability struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec *AvailabilitySpec `json:"spec"`
+	Spec AvailabilitySpec `json:"spec"`
 }
 
 // AvailabilitySpec is the specification for Availability.
@@ -25,13 +25,13 @@ type AvailabilitySpec struct {
 	// "selector" will still be available after the eviction, i.e. even in the
 	// absence of the evicted pod.  So for example you can prevent all voluntary
 	// evictions by specifying "100%".
-	MinAvailable intstr.IntOrString `json:"minAvailable,omitempty"`
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
 
 	// An eviction is allowed if at most "maxUnavailable" pods selected by
 	// "selector" are unavailable after the eviction, i.e. even in absence of
 	// the evicted pod. For example, one can prevent all voluntary evictions
 	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
-	MaxUnavailable intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 
 	// RestartPolicy describes how the container should be restarted. Only one
 	// of `Always`, `OnFailure` or `Never` restart policies may be specified.
@@ -50,8 +50,8 @@ type AvailabilitySpec struct {
 // Affinity is DeploymentSpecific so will be filled in later on.
 var DefaultAvailabilitySpec = AvailabilitySpec{
 	Replicas:       func(i int32) *int32 { return &i }(2),
-	MinAvailable:   intstr.FromInt(1),
-	MaxUnavailable: intstr.FromString("25%"),
+	MinAvailable:   ptrIntOrString(intstr.FromInt(1)),
+	MaxUnavailable: ptrIntOrString(intstr.FromString("25%")),
 	RestartPolicy:  corev1.RestartPolicyAlways,
 	DeploymentStrategy: v1beta1.DeploymentStrategy{
 		Type: v1beta1.RollingUpdateDeploymentStrategyType,

@@ -21,15 +21,14 @@ func getIngress(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Ingress, error) {
 	}
 
 	dns := crd.Spec.Network.DNS
-	labels := k8sutils.Labels(nil, crd.ObjectMeta)
+	labels := k8sutils.Labels(crd.Labels, crd.ObjectMeta)
 
 	ingressClass := crd.Spec.Network.IngressClass
 	if ingressClass == "" {
 		ingressClass = "nginx"
 	}
 
-	annotations := crd.Annotations
-	annotations = k8sutils.Annotations(annotations, v1alpha1.Version, crd)
+	annotations := k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd)
 	annotations["kubernetes.io/ingress.class"] = ingressClass
 	annotations["external-dns.alpha.kubernetes.io/hostname"] = dns.Domain + "."
 	annotations["external-dns.alpha.kubernetes.io/ttl"] = ttlValue(dns.TTL)
