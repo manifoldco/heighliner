@@ -8,5 +8,5 @@ spec:
       domain: hello-world.demo.cool
   containers:
   - name: hello-world
-    image: hlnrio/hello-world:latest
+    image: hlnr/hello-world:latest
     imagePullPolicy: IfNotPresent
