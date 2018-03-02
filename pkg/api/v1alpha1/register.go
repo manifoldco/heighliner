@@ -6,7 +6,7 @@ import (
 
 const (
 	// GroupName defines the name of the group we'll use for our components.
-	GroupName = "hglnr.io"
+	GroupName = "hlnr.io"
 
 	// Version defines the version of this API.
 	Version = "v1alpha1"

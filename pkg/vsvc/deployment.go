@@ -22,7 +22,7 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, er
 
 	affinity := availability.Affinity
 	if affinity == nil {
-		affinity = DefaultAffinity("hglnr.io/service", crd.Name)
+		affinity = DefaultAffinity("hlnr.io/service", crd.Name)
 	}
 
 	dpl := &v1beta1.Deployment{

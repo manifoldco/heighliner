@@ -107,7 +107,7 @@ EXAMPLES=hello-world
 DOCKER_EXAMPLES=$(addprefix docker-,$(EXAMPLES))
 
 $(DOCKER_EXAMPLES):
-	docker build -t hglnrio/$(patsubst docker-%,%,$@):latest _examples/$(patsubst docker-%,%,$@)
+	docker build -t hlnrio/$(patsubst docker-%,%,$@):latest _examples/$(patsubst docker-%,%,$@)
 
 examples: $(DOCKER_EXAMPLES)
 

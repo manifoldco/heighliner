@@ -1,4 +1,4 @@
-apiVersion: hglnr.io/v1alpha1
+apiVersion: hlnr.io/v1alpha1
 kind: VersionedMicroservice
 metadata:
   name: hello-world-minimum
@@ -8,5 +8,5 @@ spec:
       domain: hello-world.demo.cool
   containers:
   - name: hello-world
-    image: hglnrio/hello-world:latest
+    image: hlnrio/hello-world:latest
     imagePullPolicy: IfNotPresent

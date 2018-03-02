@@ -15,8 +15,8 @@ func Annotations(ann map[string]string, version string, resource runtime.Object)
 		ann = map[string]string{}
 	}
 
-	ann["hglnr.io/version"] = version
-	ann["hglnr.io/component"] = kubekit.TypeName(resource)
+	ann["hlnr.io/version"] = version
+	ann["hlnr.io/component"] = kubekit.TypeName(resource)
 	return ann
 }
 
