@@ -3,7 +3,7 @@ kind: ClusterRole
 metadata:
   name: heighliner:versionedmicroservice
 rules:
-  - apiGroups: ["hglnr.io"]
+  - apiGroups: ["hlnr.io"]
     resources: ["versionedmicroservices"]
     verbs: ["*"]
   - apiGroups: ["apiextensions.k8s.io"]
@@ -22,7 +22,7 @@ roleRef:
   name: heighliner:versionedmicroservice
 subjects:
   - name: heighliner-versionedmicroservice
-    namespace: hglnr-system
+    namespace: hlnr-system
     kind: ServiceAccount
 
 ---
@@ -31,7 +31,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: heighliner-versionedmicroservice
-  namespace: hglnr-system
+  namespace: hlnr-system
 
 ---
 
@@ -39,7 +39,7 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: versioned-microservice-controller
-  namespace: hglnr-system
+  namespace: hlnr-system
 spec:
   replicas: 1
   template:

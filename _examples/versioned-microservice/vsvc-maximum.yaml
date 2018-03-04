@@ -1,4 +1,4 @@
-apiVersion: hglnr.io/v1alpha1
+apiVersion: hlnr.io/v1alpha1
 kind: VersionedMicroservice
 metadata:
   labels:
@@ -52,7 +52,7 @@ spec:
     emptyDir: {}
   containers:
   - name: hello-world
-    image: hglnrio/hello-world:latest
+    image: hlnr/hello-world:latest
     imagePullPolicy: Never
     readinessProbe:
       httpGet:

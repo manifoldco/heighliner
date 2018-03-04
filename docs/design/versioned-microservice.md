@@ -74,7 +74,7 @@ network:
     externalPort: 80
     internalPort: 8080
   dns:
-  - hostname: api.hglnr.io
+  - hostname: api.hlnr.io
     ttl: 3600
     tls: true
     port: headless
@@ -101,7 +101,7 @@ This will be automatically generated from a different set of Policies, like the
 ```yaml
 containers:
 - name: api
-  image: hglnr.io/api:latest
+  image: hlnr.io/api:latest
   imagePullPolicy: IfNotPresent
   env:
   - name: PORT
