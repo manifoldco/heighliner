@@ -15,7 +15,7 @@ type Network struct {
 type NetworkSpec struct {
 	IngressClass string        `json:"ingressClass"`
 	Ports        []NetworkPort `json:"ports"`
-	DNS          *NetworkDNS   `json:"dns"`
+	DNS          []NetworkDNS  `json:"dns"`
 }
 
 // NetworkPort describes a port that is exposed for a given service.
@@ -40,6 +40,8 @@ type NetworkDNS struct {
 	Domain string `json:"domain,hostname"`
 
 	// TTL in seconds for the DNS entry, defaults to `300`.
+	// Note: if multiple DNS entries are provided, the TTL of the first record
+	// will be used.
 	TTL int32 `json:"ttl"`
 
 	// By default, TLS will be enabled for external access to a service.

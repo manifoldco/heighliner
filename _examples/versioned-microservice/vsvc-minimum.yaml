@@ -5,7 +5,7 @@ metadata:
 spec:
   network:
     dns:
-      domain: hello-world.demo.cool
+    - domain: hello-world.demo.cool
   containers:
   - name: hello-world
     image: hlnr/hello-world:latest

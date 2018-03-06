@@ -3,6 +3,7 @@ package vsvc
 import (
 	"log"
 	"strconv"
+	"strings"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
@@ -29,15 +30,15 @@ func getIngress(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 		ingressClass = "nginx"
 	}
 
+	domains := make([]string, len(dns))
+	for i, record := range dns {
+		domains[i] = record.Domain
+	}
+
 	annotations := k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd)
 	annotations["kubernetes.io/ingress.class"] = ingressClass
-	annotations["external-dns.alpha.kubernetes.io/hostname"] = dns.Domain + "."
-	annotations["external-dns.alpha.kubernetes.io/ttl"] = ttlValue(dns.TTL)
-
-	servicePort := "headless"
-	if dns.Port != "" {
-		servicePort = dns.Port
-	}
+	annotations["external-dns.alpha.kubernetes.io/hostname"] = strings.Join(domains, ",")
+	annotations["external-dns.alpha.kubernetes.io/ttl"] = ttlValue(dns[0].TTL)
 
 	ing := &v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -53,51 +54,67 @@ func getIngress(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 			},
 		},
 		Spec: v1beta1.IngressSpec{
-			TLS: getIngressTLS(dns),
-			Rules: []v1beta1.IngressRule{
-				{
-					Host: dns.Domain,
-					IngressRuleValue: v1beta1.IngressRuleValue{
-						HTTP: &v1beta1.HTTPIngressRuleValue{
-							Paths: []v1beta1.HTTPIngressPath{
-								{
-									// TODO(jelmer): do we want to make this
-									// configurable?
-									// This might be where we start putting our
-									// "highly opinionated" goals forward.
-									Path: "/",
-									Backend: v1beta1.IngressBackend{
-										ServiceName: crd.Name,
-										ServicePort: intstr.FromString(servicePort),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			TLS:   getIngressTLS(dns),
+			Rules: getIngressRules(crd.Name, dns),
 		},
 	}
 
 	return ing, nil
 }
 
-func getIngressTLS(dns *v1alpha1.NetworkDNS) []v1beta1.IngressTLS {
-	if dns.DisableTLS {
-		return nil
+func getIngressRules(serviceName string, records []v1alpha1.NetworkDNS) []v1beta1.IngressRule {
+	rules := make([]v1beta1.IngressRule, len(records))
+	for i, r := range records {
+		servicePort := "headless"
+		if r.Port != "" {
+			servicePort = r.Port
+		}
+
+		rules[i] = v1beta1.IngressRule{
+			Host: r.Domain,
+			IngressRuleValue: v1beta1.IngressRuleValue{
+				HTTP: &v1beta1.HTTPIngressRuleValue{
+					Paths: []v1beta1.HTTPIngressPath{
+						{
+							// TODO(jelmer): do we want to make this
+							// configurable?
+							// This might be where we start putting our
+							// "highly opinionated" goals forward.
+							Path: "/",
+							Backend: v1beta1.IngressBackend{
+								ServiceName: serviceName,
+								ServicePort: intstr.FromString(servicePort),
+							},
+						},
+					},
+				},
+			},
+		}
 	}
 
-	secretName := "heighliner-components"
-	if dns.TLSGroup != "" {
-		secretName = dns.TLSGroup
-	}
+	return rules
+}
 
-	return []v1beta1.IngressTLS{
-		{
+func getIngressTLS(records []v1alpha1.NetworkDNS) []v1beta1.IngressTLS {
+	tls := make([]v1beta1.IngressTLS, len(records))
+
+	for i, dns := range records {
+		if dns.DisableTLS {
+			return nil
+		}
+
+		secretName := "heighliner-components"
+		if dns.TLSGroup != "" {
+			secretName = dns.TLSGroup
+		}
+
+		tls[i] = v1beta1.IngressTLS{
 			Hosts:      []string{dns.Domain},
 			SecretName: "certificates-" + secretName,
-		},
+		}
 	}
+
+	return tls
 }
 
 func ttlValue(ttl int32) string {
