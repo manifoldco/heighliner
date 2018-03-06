@@ -64,6 +64,9 @@ var defaultDisruptionBudget = &v1beta1.PodDisruptionBudget{
 			MatchLabels: map[string]string{},
 		},
 	},
+	Status: v1beta1.PodDisruptionBudgetStatus{
+		DisruptedPods: map[string]metav1.Time{},
+	},
 }
 
 func ptrIntOrStringFromInt(i int) *intstr.IntOrString {
