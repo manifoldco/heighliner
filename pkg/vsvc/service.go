@@ -9,11 +9,12 @@ import (
 	"github.com/jelmersnoeck/kubekit"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // getService creates the Service Object for a VersionedMicroservice.
-func getService(crd *v1alpha1.VersionedMicroservice) (*corev1.Service, error) {
+func getService(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 	network := crd.Spec.Network
 	if network == nil {
 		log.Printf("No network configured for %s, skipping service", crd.Name)

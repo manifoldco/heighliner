@@ -8,10 +8,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // getDeployment creates the Deployment Object for a VersionedMicroservice.
-func getDeployment(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Deployment, error) {
+func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 	availability := crd.Spec.Availability
 	if availability == nil {
 		availability = &v1alpha1.DefaultAvailabilitySpec

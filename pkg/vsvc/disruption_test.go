@@ -7,12 +7,14 @@ import (
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
 	"github.com/stretchr/testify/assert"
+	"k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func TestGetPodDisruptionBudget(t *testing.T) {
 	resultFunc := func(t *testing.T, crd *v1alpha1.VersionedMicroservice, min, max *intstr.IntOrString) {
-		pdb, err := getPodDisruptionBudget(crd)
+		obj, err := getPodDisruptionBudget(crd)
+		pdb := obj.(*v1beta1.PodDisruptionBudget)
 		assert.NoError(t, err)
 		assert.Equal(t, min, pdb.Spec.MinAvailable)
 		assert.Equal(t, max, pdb.Spec.MaxUnavailable)

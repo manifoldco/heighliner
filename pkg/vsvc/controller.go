@@ -10,10 +10,13 @@ import (
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 
 	"github.com/jelmersnoeck/kubekit"
-	"k8s.io/apimachinery/pkg/api/errors"
+	"github.com/jelmersnoeck/kubekit/errors"
+	"github.com/jelmersnoeck/kubekit/patcher"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
 // Controller represents the VersionedMicroserviceController. This controller
@@ -23,6 +26,7 @@ type Controller struct {
 	rc        *rest.RESTClient
 	cs        kubernetes.Interface
 	namespace string
+	patcher   *patcher.Patcher
 }
 
 // NewController returns a new VersionedMicroservice Controller.
@@ -36,6 +40,7 @@ func NewController(cfg *rest.Config, cs kubernetes.Interface, namespace string) 
 		cs:        cs,
 		rc:        rc,
 		namespace: namespace,
+		patcher:   patcher.New("hlnr-versioned-microservice", cmdutil.NewFactory(nil)),
 	}, nil
 }
 
@@ -78,69 +83,64 @@ func (c *Controller) run(ctx context.Context) {
 func (c *Controller) onAdd(obj interface{}) {
 	vsvc := obj.(*v1alpha1.VersionedMicroservice).DeepCopy()
 
-	dpl, err := getDeployment(vsvc)
-	if err != nil {
-		log.Printf("Could not configure Deployment for %s: %s", vsvc.Name, err)
+	if err := c.applyCRD(vsvc, patcher.DisableUpdate()); err != nil {
+		log.Printf("Error deploying VersionedMicroservice %s: %s", vsvc.Name, err)
 		return
 	}
 
-	svc, err := getService(vsvc)
-	if err != nil {
-		log.Printf("Could not configure Service for %s: %s", vsvc.Name, err)
-		return
-	}
-
-	ing, err := getIngress(vsvc)
-	if err != nil {
-		log.Printf("Could not configure Ingress for %s: %s", vsvc.Name, err)
-		return
-	}
-
-	pdb, err := getPodDisruptionBudget(vsvc)
-	if err != nil {
-		log.Printf("Could not configure PodDisruptionBudget for %s: %s", vsvc.Name, err)
-		return
-	}
-
-	log.Printf("Deploying new application %s", vsvc.Name)
-	if _, err := c.cs.Extensions().Deployments(vsvc.Namespace).Create(dpl); err != nil && !errors.IsAlreadyExists(err) {
-		log.Printf("Error creating Deployment for %s: %s", vsvc.Name, err)
-		return
-	}
-
-	if svc != nil {
-		if _, err := c.cs.CoreV1().Services(vsvc.Namespace).Create(svc); err != nil && !errors.IsAlreadyExists(err) {
-			log.Printf("Error creating Service for %s: %s", vsvc.Name, err)
-			return
-		}
-	}
-
-	// This is a great example of why we need to look into using `runtime.Object`
-	// to send to the server. This way, we could just append data to a slice of
-	// objects and apply these, without having to add checks if these are
-	// present or not.
-	if ing != nil {
-		if _, err := c.cs.Extensions().Ingresses(vsvc.Namespace).Create(ing); err != nil && !errors.IsAlreadyExists(err) {
-			log.Printf("Error creating Ingress for %s: %s", vsvc.Name, err)
-			return
-		}
-	}
-
-	if pdb != nil {
-		if _, err := c.cs.PolicyV1beta1().PodDisruptionBudgets(vsvc.Namespace).Create(pdb); err != nil && !errors.IsAlreadyExists(err) {
-			log.Printf("Error creating PodDisruptionBudget for %s: %s", vsvc.Name, err)
-			return
-		}
-	}
+	log.Printf("Deployed VersionedMicroservice %s", vsvc.Name)
 }
 
 func (c *Controller) onUpdate(old, new interface{}) {
-	// Updates fail sometimes if we do it directly from here. We need to
-	// integrate with the ThreeWayMergeStrategy available in apimachinery and
-	// use the object mapper to allow patching the objects.
+	vsvc := new.(*v1alpha1.VersionedMicroservice).DeepCopy()
+
+	if err := c.applyCRD(vsvc, patcher.DisableCreate()); err != nil {
+		log.Printf("Error updating VersionedMicroservice %s: %s", vsvc.Name, err)
+	}
+
+	log.Printf("Synced VersionedMicroservice %s", vsvc.Name)
 }
 
 func (c *Controller) onDelete(obj interface{}) {
 	vsvc := obj.(*v1alpha1.VersionedMicroservice).DeepCopy()
-	log.Printf("Deleting application %s", vsvc.Name)
+	log.Printf("Deleting VersionedMicroservice %s", vsvc.Name)
+}
+
+func (c *Controller) applyCRD(vsvc *v1alpha1.VersionedMicroservice, opts ...patcher.OptionFunc) error {
+	if err := updateObject("Deployment", vsvc, c.patcher, getDeployment); err != nil {
+		return err
+	}
+
+	if err := updateObject("Service", vsvc, c.patcher, getService); err != nil {
+		return err
+	}
+
+	if err := updateObject("Ingress", vsvc, c.patcher, getIngress); err != nil && !errors.IsNoObjectGiven(err) {
+		return err
+	}
+
+	if err := updateObject("PodDisruptionBudget", vsvc, c.patcher, getPodDisruptionBudget, patcher.WithDeleteFirst()); err != nil && !errors.IsNoObjectGiven(err) {
+		return err
+	}
+
+	return nil
+}
+
+type objectFunc func(*v1alpha1.VersionedMicroservice) (runtime.Object, error)
+
+// TODO: these errors should be logged with glog and at a higher level so we can
+// cut down noise.
+func updateObject(name string, vsvc *v1alpha1.VersionedMicroservice, p *patcher.Patcher, f objectFunc, opts ...patcher.OptionFunc) error {
+	obj, err := f(vsvc)
+	if err != nil {
+		log.Printf("Could not configure %s for %s: %s", name, vsvc.Name, err)
+		return err
+	}
+
+	if _, err := p.Apply(obj, opts...); err != nil && !errors.IsNoObjectGiven(err) {
+		log.Printf("Could not apply %s for %s: %s", name, vsvc.Name, err)
+		return err
+	}
+
+	return nil
 }

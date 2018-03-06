@@ -10,11 +10,12 @@ import (
 	"github.com/jelmersnoeck/kubekit"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // getService creates the Service Object for a VersionedMicroservice.
-func getIngress(crd *v1alpha1.VersionedMicroservice) (*v1beta1.Ingress, error) {
+func getIngress(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 	if crd.Spec.Network == nil || crd.Spec.Network.DNS == nil {
 		log.Printf("No DNS specified for %s, skipping ingress.", crd.Name)
 		return nil, nil
