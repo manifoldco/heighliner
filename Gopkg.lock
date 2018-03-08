@@ -47,8 +47,14 @@
 [[projects]]
   name = "github.com/Sirupsen/logrus"
   packages = ["."]
-  revision = "d682213848ed68c0a260ca37d6dd5ace8423f5ba"
-  version = "v1.0.4"
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
+
+[[projects]]
+  name = "github.com/asaskevich/govalidator"
+  packages = ["."]
+  revision = "521b25f4b05fd26bec69d9dedeb8f9c9a83939a8"
+  version = "v8"
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
@@ -69,6 +75,7 @@
     "aws/request",
     "aws/session",
     "aws/signer/v4",
+    "internal/sdkio",
     "internal/sdkrand",
     "internal/shareddefaults",
     "private/protocol",
@@ -87,8 +94,8 @@
     "service/kms",
     "service/sts"
   ]
-  revision = "aace5875a5c3b85a3902c6d72b9caed301d64cce"
-  version = "v1.13.8"
+  revision = "4c9c8e98642a1a5e7c27d7a644cf9140809d49ee"
+  version = "v1.13.13"
 
 [[projects]]
   branch = "master"
@@ -105,8 +112,8 @@
 [[projects]]
   name = "github.com/dgrijalva/jwt-go"
   packages = ["."]
-  revision = "dbeaa9332f19a944acb5736b4456cfcc02140e29"
-  version = "v3.1.0"
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
 
 [[projects]]
   name = "github.com/docker/distribution"
@@ -192,8 +199,20 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "32e4c1e6bc4e7d0d8451aa6b75200d19e37a536a"
-  version = "v1.32.0"
+  revision = "6333e38ac20b8949a8dd68baa3650f4dee8f39f0"
+  version = "v1.33.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-openapi/analysis"
+  packages = ["."]
+  revision = "f59a71f0ece6f9dfb438be7f45148f006cbad88e"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-openapi/errors"
+  packages = ["."]
+  revision = "7bcb96a367bac6b76e6e42fa84155bb5581dcff8"
 
 [[projects]]
   branch = "master"
@@ -209,15 +228,39 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/go-openapi/loads"
+  packages = ["."]
+  revision = "2a2b323bab96e6b1fdee110e57d959322446e9c9"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-openapi/runtime"
+  packages = ["."]
+  revision = "09fac855d8504674b22594470227bd94e5005025"
+
+[[projects]]
+  branch = "master"
   name = "github.com/go-openapi/spec"
   packages = ["."]
   revision = "d8000b5bfbd1147255710505a27c735b6b2ae2ac"
 
 [[projects]]
   branch = "master"
+  name = "github.com/go-openapi/strfmt"
+  packages = ["."]
+  revision = "6d1a47fad79c81e8cd732889cb80e91123951860"
+
+[[projects]]
+  branch = "master"
   name = "github.com/go-openapi/swag"
   packages = ["."]
   revision = "ceb469cb0fdf2d792f28d771bc05da6c606f55e5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/go-openapi/validate"
+  packages = ["."]
+  revision = "180bba53b98899f743a112e568bed9e2ef31aa20"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -286,7 +329,7 @@
     "openstack/utils",
     "pagination"
   ]
-  revision = "fe864ba585e153c296567b9ab4bbb1345d05900a"
+  revision = "bc0882a09253c768051d9201257640794415c5a9"
 
 [[projects]]
   branch = "master"
@@ -332,7 +375,7 @@
     "errors",
     "patcher"
   ]
-  revision = "ff73558304005ea461c10c26e26b00ee60c05cb6"
+  revision = "3e99363dd6aadff679680a14a895fe3a201dadfe"
 
 [[projects]]
   name = "github.com/jessevdk/go-flags"
@@ -365,7 +408,7 @@
     "jlexer",
     "jwriter"
   ]
-  revision = "32fa128f234d041f196a9f3e0fea5ac9772c08e1"
+  revision = "f594efddfa171111dc4349cd6e78e8f61dc7936f"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -378,6 +421,12 @@
   name = "github.com/mitchellh/go-wordwrap"
   packages = ["."]
   revision = "ad45545899c7b13c020ea92b2072220eefad42b8"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/mapstructure"
+  packages = ["."]
+  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
 
 [[projects]]
   name = "github.com/modern-go/concurrent"
@@ -441,7 +490,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "6fb6fce6f8b75884b92e1889c150403fc0872c5e"
+  revision = "e4aa40a9169a88835b849a6efb71e05dc04b88f0"
 
 [[projects]]
   branch = "master"
@@ -452,7 +501,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "7186fbf4eb22a031bcd4657c8adc3fc39acf6d8a"
+  revision = "54d17b57dd7d4a3aa092476596b3f8a933bde349"
 
 [[projects]]
   name = "github.com/russross/blackfriday"
@@ -487,7 +536,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "91a49db82a88618983a78a06c1cbd4e00ab749ab"
+  revision = "c4a91bd4f524f10d064139674cf55852e055ad01"
 
 [[projects]]
   branch = "master"
@@ -500,7 +549,7 @@
     "idna",
     "lex/httplex"
   ]
-  revision = "d25186b37f34ebdbbea8f488ef055638dfab272d"
+  revision = "892bf7b0c6e2f93b51166bf3882e50277fa5afc6"
 
 [[projects]]
   branch = "master"
@@ -512,7 +561,7 @@
     "jws",
     "jwt"
   ]
-  revision = "2f32c3ac0fa4fb807a0fcefb0b6f2468a0d99bd0"
+  revision = "7af32f14d0a25aec7873e0683e8e48dcead159a8"
 
 [[projects]]
   branch = "master"
@@ -521,7 +570,7 @@
     "unix",
     "windows"
   ]
-  revision = "dd2ff4accc098aceecb86b36eaa7829b2a17b1c9"
+  revision = "932fb2287bee613f2a65e71685c9d9c0020da979"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -558,7 +607,7 @@
     "go/ast/astutil",
     "imports"
   ]
-  revision = "059bec968c61383b574810040ba9410712de36c5"
+  revision = "c1547a3f90f245aa85784a99580d3f601380cc07"
 
 [[projects]]
   name = "google.golang.org/appengine"
@@ -593,6 +642,15 @@
   packages = ["."]
   revision = "3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4"
   version = "v0.9.0"
+
+[[projects]]
+  branch = "v2"
+  name = "gopkg.in/mgo.v2"
+  packages = [
+    "bson",
+    "internal/json"
+  ]
+  revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
 
 [[projects]]
   name = "gopkg.in/warnings.v0"
@@ -648,6 +706,7 @@
   packages = [
     "pkg/apis/apiextensions",
     "pkg/apis/apiextensions/v1beta1",
+    "pkg/apiserver/validation",
     "pkg/client/clientset/clientset",
     "pkg/client/clientset/clientset/scheme",
     "pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
@@ -718,7 +777,6 @@
   revision = "19e3f5aa3adca672c153d324e6b7d82ff8935f03"
 
 [[projects]]
-  branch = "master"
   name = "k8s.io/apiserver"
   packages = [
     "pkg/apis/audit",
@@ -730,7 +788,8 @@
     "pkg/util/feature",
     "pkg/util/flag"
   ]
-  revision = "0c45f99421964c96add6a812752ff222a3a8118d"
+  revision = "40b00dd493d8fb98c255f0c6427f97fbf865a538"
+  version = "kubernetes-1.9.3"
 
 [[projects]]
   name = "k8s.io/client-go"
@@ -1065,8 +1124,8 @@
     "plugin/pkg/scheduler/util",
     "plugin/pkg/scheduler/volumebinder"
   ]
-  revision = "d2835416544f298c919e2ead3be3d0864b52323b"
-  version = "v1.9.3"
+  revision = "bee2d1505c4fe820744d26d41ecd3fdd4a3d6546"
+  version = "v1.9.4"
 
 [[projects]]
   branch = "master"
@@ -1083,6 +1142,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7fd465187e914e7b76d7dda352a2b41888a2bdd07ebe797096dd72c19d5d666d"
+  inputs-digest = "6c0a486c1332021d29d4bc36e3448d99cf9c3e69540f5859d36e8218fe293c01"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -1,6 +1,10 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kube-openapi/pkg/util/proto"
+)
 
 // Network describes the configuration options for the NetworkPolicy.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -25,10 +29,10 @@ type NetworkPort struct {
 
 	// The port that is exposed within the service container and which the
 	// application is running on.
-	TargetPort int32 `json:"internalPort,targetPort"`
+	TargetPort int32 `json:"targetPort"`
 
 	// The port this service will be available on from within the cluster.
-	Port int32 `json:"externalPort,port"`
+	Port int32 `json:"port"`
 }
 
 // NetworkDNS describes a DNS entry for a given service, allowing external
@@ -37,7 +41,7 @@ type NetworkPort struct {
 // will be created with the internalPort `8080`.
 type NetworkDNS struct {
 	// The domain name that will be linked to the service.
-	Domain string `json:"domain,hostname"`
+	Domain string `json:"domain"`
 
 	// TTL in seconds for the DNS entry, defaults to `300`.
 	// Note: if multiple DNS entries are provided, the TTL of the first record
@@ -57,4 +61,47 @@ type NetworkDNS struct {
 	// Port links back to a NetworkPort and will be used to guide traffic for
 	// this hostname through the specified port. Defaults to `headless`.
 	Port string `json:"port"`
+}
+
+// NetworkValidationSchema represents the OpenAPIV3Schema validation for the
+// Network CRD.
+var NetworkValidationSchema = apiextv1beta1.JSONSchemaProps{
+	Properties: map[string]apiextv1beta1.JSONSchemaProps{
+		"ingressClass": {
+			Type: "string",
+			Enum: []apiextv1beta1.JSON{
+				{
+					Raw: jsonBytes("nginx"),
+				},
+			},
+		},
+		"ports": {
+			Items: &apiextv1beta1.JSONSchemaPropsOrArray{
+				Schema: &apiextv1beta1.JSONSchemaProps{
+					Required: []string{"name", "targetPort", "port"},
+				},
+			},
+		},
+		"dns": {
+			Items: &apiextv1beta1.JSONSchemaPropsOrArray{
+				Schema: &apiextv1beta1.JSONSchemaProps{
+					Required: []string{"domain"},
+					Properties: map[string]apiextv1beta1.JSONSchemaProps{
+						"ttl": {
+							Type: proto.Integer,
+						},
+						"disableTLS": {
+							Type: proto.Boolean,
+						},
+						"tlsGroup": {
+							Type: proto.String,
+						},
+						"port": {
+							Type: proto.String,
+						},
+					},
+				},
+			},
+		},
+	},
 }

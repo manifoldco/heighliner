@@ -19,6 +19,10 @@ required = [
   version = "kubernetes-1.9.3"
 
 [[constraint]]
+  name = "k8s.io/apiserver"
+  version = "kubernetes-1.9.3"
+
+[[constraint]]
   name = "k8s.io/api"
   version = "kubernetes-1.9.3"
 
