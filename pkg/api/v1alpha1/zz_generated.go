@@ -191,12 +191,8 @@ func (in *NetworkSpec) DeepCopyInto(out *NetworkSpec) {
 	}
 	if in.DNS != nil {
 		in, out := &in.DNS, &out.DNS
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(NetworkDNS)
-			**out = **in
-		}
+		*out = make([]NetworkDNS, len(*in))
+		copy(*out, *in)
 	}
 	return
 }
