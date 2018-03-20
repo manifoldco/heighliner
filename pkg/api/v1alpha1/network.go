@@ -6,13 +6,21 @@ import (
 	"k8s.io/kube-openapi/pkg/util/proto"
 )
 
-// Network describes the configuration options for the NetworkPolicy.
+// NetworkPolicy describes the configuration options for the NetworkPolicy.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type Network struct {
+type NetworkPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
 	Spec NetworkSpec `json:"spec"`
+}
+
+// NetworkPolicyList is a list of NetworkPolicy CRDs.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type NetworkPolicyList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []NetworkPolicy `json:"items"`
 }
 
 // NetworkSpec describes the specification for Network.
@@ -63,9 +71,9 @@ type NetworkDNS struct {
 	Port string `json:"port"`
 }
 
-// NetworkValidationSchema represents the OpenAPIV3Schema validation for the
-// Network CRD.
-var NetworkValidationSchema = apiextv1beta1.JSONSchemaProps{
+// NetworkPolicyValidationSchema represents the OpenAPIV3Schema validation for
+// the NetworkPolicy CRD.
+var NetworkPolicyValidationSchema = apiextv1beta1.JSONSchemaProps{
 	Properties: map[string]apiextv1beta1.JSONSchemaProps{
 		"ingressClass": {
 			Type: "string",
