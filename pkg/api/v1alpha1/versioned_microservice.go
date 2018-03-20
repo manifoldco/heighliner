@@ -21,7 +21,7 @@ type VersionedMicroservice struct {
 type VersionedMicroserviceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []*VersionedMicroservice `json:"items"`
+	Items           []VersionedMicroservice `json:"items"`
 }
 
 // VersionedMicroserviceSpec represents the specification for a
@@ -37,8 +37,8 @@ type VersionedMicroserviceSpec struct {
 // defines the validation for the VersionedMicroserviceSpec.
 var VersionedMicroserviceValidationSchema = apiextv1beta1.JSONSchemaProps{
 	Properties: map[string]apiextv1beta1.JSONSchemaProps{
-		"availability": AvailabilityValidationSchema,
-		"network":      NetworkValidationSchema,
+		"availability": AvailabilityPolicyValidationSchema,
+		"network":      NetworkPolicyValidationSchema,
 		"containers": {
 			MinItems: ptrInt64(1),
 		},

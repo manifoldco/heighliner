@@ -8,13 +8,21 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// Availability defines the configuration options for the AvailabilityPolicy.
+// AvailabilityPolicy defines the configuration options for the AvailabilityPolicy.
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-type Availability struct {
+type AvailabilityPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
 	Spec AvailabilitySpec `json:"spec"`
+}
+
+// AvailabilityPolicyList is a list of AvailabilityPolicy CRDs.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type AvailabilityPolicyList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+	Items           []NetworkPolicy `json:"items"`
 }
 
 // AvailabilitySpec is the specification for Availability.
@@ -63,6 +71,6 @@ var DefaultAvailabilitySpec = AvailabilitySpec{
 	},
 }
 
-// AvailabilityValidationSchema represents the OpenAPIV3Schema validation for
+// AvailabilityPolicyValidationSchema represents the OpenAPIV3Schema validation for
 // the Availability CRD.
-var AvailabilityValidationSchema = apiextv1beta1.JSONSchemaProps{}
+var AvailabilityPolicyValidationSchema = apiextv1beta1.JSONSchemaProps{}
