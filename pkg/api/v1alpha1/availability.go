@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
+	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -62,6 +63,6 @@ var DefaultAvailabilitySpec = AvailabilitySpec{
 	},
 }
 
-func ptrIntOrString(i intstr.IntOrString) *intstr.IntOrString {
-	return &i
-}
+// AvailabilityValidationSchema represents the OpenAPIV3Schema validation for
+// the Availability CRD.
+var AvailabilityValidationSchema = apiextv1beta1.JSONSchemaProps{}

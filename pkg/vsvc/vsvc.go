@@ -27,5 +27,12 @@ var (
 		Scope:   v1beta1.NamespaceScoped,
 		Aliases: []string{"vsvc"},
 		Object:  &v1alpha1.VersionedMicroservice{},
+		Validation: &v1beta1.CustomResourceValidation{
+			OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
+				Properties: map[string]v1beta1.JSONSchemaProps{
+					"spec": v1alpha1.VersionedMicroserviceValidationSchema,
+				},
+			},
+		},
 	}
 )

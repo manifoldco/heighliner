@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,4 +31,19 @@ type VersionedMicroserviceSpec struct {
 	Network      *NetworkSpec       `json:"network,omitempty"`
 	Volumes      []corev1.Volume    `json:"volumes,omitempty"`
 	Containers   []corev1.Container `json:"containers"`
+}
+
+// VersionedMicroserviceValidationSchema represents the OpenAPIV3Scheme which
+// defines the validation for the VersionedMicroserviceSpec.
+var VersionedMicroserviceValidationSchema = apiextv1beta1.JSONSchemaProps{
+	Properties: map[string]apiextv1beta1.JSONSchemaProps{
+		"availability": AvailabilityValidationSchema,
+		"network":      NetworkValidationSchema,
+		"containers": {
+			MinItems: ptrInt64(1),
+		},
+	},
+	Required: []string{
+		"containers",
+	},
 }
