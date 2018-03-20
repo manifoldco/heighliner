@@ -14,18 +14,6 @@ const (
 
 	// CustomResourceNamePlural is the plural version of CustomResourceName.
 	CustomResourceNamePlural = "microservices"
-
-	// NetworkPolicyResourceName is the name used for the NetworkPolicy CRD.
-	NetworkPolicyResourceName = "networkpolicy"
-
-	// NetworkPolicyNamePlural is the plural version of NetworkPolicyResourceName.
-	NetworkPolicyNamePlural = "networkpolicies"
-
-	// AvailabilityPolicyResourceName is the name used for the AvailabilityPolicy CRD.
-	AvailabilityPolicyResourceName = "availabilitypolicy"
-
-	// AvailabilityPolicyNamePlural is the plural version of AvailabilityPolicyResourceName.
-	AvailabilityPolicyNamePlural = "availabilitypolicies"
 )
 
 var (
@@ -50,8 +38,8 @@ var (
 	// NetworkPolicyResource describes the CRD configuration for the
 	// NetworkPolicy CRD.
 	NetworkPolicyResource = kubekit.CustomResource{
-		Name:    NetworkPolicyResourceName,
-		Plural:  NetworkPolicyNamePlural,
+		Name:    "networkpolicy",
+		Plural:  "networkpolicies",
 		Group:   v1alpha1.GroupName,
 		Version: v1alpha1.Version,
 		Scope:   v1beta1.NamespaceScoped,
@@ -69,8 +57,8 @@ var (
 	// AvailabilityPolicyResource describes the CRD configuration for the
 	// AvailabilityPolicy CRD.
 	AvailabilityPolicyResource = kubekit.CustomResource{
-		Name:    AvailabilityPolicyResourceName,
-		Plural:  AvailabilityPolicyNamePlural,
+		Name:    "availabilitypolicy",
+		Plural:  "availabilitypolicies",
 		Group:   v1alpha1.GroupName,
 		Version: v1alpha1.Version,
 		Scope:   v1beta1.NamespaceScoped,
@@ -80,6 +68,43 @@ var (
 			OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
 				Properties: map[string]v1beta1.JSONSchemaProps{
 					"spec": v1alpha1.AvailabilityPolicyValidationSchema,
+				},
+			},
+		},
+	}
+
+	// ImagePolicyResource describes the CRD configuration for the ImagePolicy CRD.
+	ImagePolicyResource = kubekit.CustomResource{
+		Name:    "imagepolicy",
+		Plural:  "imagepolicies",
+		Group:   v1alpha1.GroupName,
+		Version: v1alpha1.Version,
+		Scope:   v1beta1.NamespaceScoped,
+		Aliases: []string{"ip"},
+		Object:  &v1alpha1.ImagePolicy{},
+		Validation: &v1beta1.CustomResourceValidation{
+			OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
+				Properties: map[string]v1beta1.JSONSchemaProps{
+					"spec": v1alpha1.ImagePolicyValidationSchema,
+				},
+			},
+		},
+	}
+
+	// VersioningPolicyResource describes the CRD configuration for the
+	// VersioningPolicy CRD.
+	VersioningPolicyResource = kubekit.CustomResource{
+		Name:    "versioningpolicy",
+		Plural:  "versioningpolicies",
+		Group:   v1alpha1.GroupName,
+		Version: v1alpha1.Version,
+		Scope:   v1beta1.NamespaceScoped,
+		Aliases: []string{"vp"},
+		Object:  &v1alpha1.VersioningPolicy{},
+		Validation: &v1beta1.CustomResourceValidation{
+			OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
+				Properties: map[string]v1beta1.JSONSchemaProps{
+					"spec": v1alpha1.VersioningPolicyValidationSchema,
 				},
 			},
 		},

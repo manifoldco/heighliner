@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	core "k8s.io/kubernetes/pkg/apis/core"
 )
 
 // Microservice represents the definition which we'll use to define a deployable
@@ -25,11 +26,12 @@ type MicroserviceList struct {
 
 // MicroserviceSpec represents the specification for a Microservice. It houses
 // all the policies which we'll use to build a VersionedMicroservice.
-type MicroserviceSpec struct{}
+type MicroserviceSpec struct {
+	ImagePolicy core.LocalObjectReference `json:"imagePolicy"`
+}
 
 // MicroserviceValidationSchema represents the OpenAPIV3Scheme which
 // defines the validation for the MicroserviceSpec.
 var MicroserviceValidationSchema = apiextv1beta1.JSONSchemaProps{
-	Properties: map[string]apiextv1beta1.JSONSchemaProps{},
-	Required:   []string{},
+	Required: []string{"imagePolicy"},
 }

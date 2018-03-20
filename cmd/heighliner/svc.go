@@ -51,6 +51,16 @@ func svcCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if err := kubekit.CreateCRD(acs, svc.ImagePolicyResource); err != nil {
+		log.Printf("Could not create ImagePolicy CRD: %s\n", err)
+		return err
+	}
+
+	if err := kubekit.CreateCRD(acs, svc.VersioningPolicyResource); err != nil {
+		log.Printf("Could not create VersioningPolicy CRD: %s\n", err)
+		return err
+	}
+
 	ctrl, err := svc.NewController(cfg, cs, svcFlags.Namespace)
 	if err != nil {
 		log.Printf("Could not create controller: %s\n", err)
