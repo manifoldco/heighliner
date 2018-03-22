@@ -25,7 +25,7 @@ type VersioningPolicyList struct {
 
 // VersioningSpec describes the specification for Versioning.
 type VersioningSpec struct {
-	SemverRef *SemverSource `json:"semverRef"`
+	Semver *SemverSource `json:"semver"`
 }
 
 type (
@@ -43,26 +43,26 @@ type (
 var (
 	// SemverLevelRelease is used for a release that is ready to be rolled out
 	// to production.
-	SemverLevelRelease = "release"
+	SemverLevelRelease SemverLevel = "release"
 
 	// SemverLevelReleaseCandidate is used for a release-candidate that is ready
 	// for QA.
-	SemverLevelReleaseCandidate = "rc"
+	SemverLevelReleaseCandidate SemverLevel = "rc"
 
 	// SemverLevelPreview is used for a preview release. This is generally
 	// associated with development deploys.
-	SemverLevelPreview = "preview"
+	SemverLevelPreview SemverLevel = "preview"
 
 	// SemverVersionMajor indicates that we will release major, minor and patch
 	// releases.
-	SemverVersionMajor = "major"
+	SemverVersionMajor SemverVersion = "major"
 
 	// SemverVersionMinor indicates that we will release minor and patch
 	// releases.
-	SemverVersionMinor = "minor"
+	SemverVersionMinor SemverVersion = "minor"
 
 	// SemverVersionPatch indicates that we will release only patch releases.
-	SemverVersionPatch = "patch"
+	SemverVersionPatch SemverVersion = "patch"
 )
 
 // SemverSource is a versioning policy based on semver.
@@ -77,23 +77,27 @@ type SemverSource struct {
 // VersioningPolicyValidationSchema represents the OpenAPIV3Schema validation for
 // the NetworkPolicy CRD.
 var VersioningPolicyValidationSchema = apiextv1beta1.JSONSchemaProps{
-	Required: []string{"version", "level"},
 	Properties: map[string]apiextv1beta1.JSONSchemaProps{
-		"version": {
-			Type: proto.String,
-			Enum: []apiextv1beta1.JSON{
-				{Raw: jsonBytes(SemverVersionMajor)},
-				{Raw: jsonBytes(SemverVersionMinor)},
-				{Raw: jsonBytes(SemverVersionPatch)},
+		"semver": {
+			Properties: map[string]apiextv1beta1.JSONSchemaProps{
+				"version": {
+					Type: proto.String,
+					Enum: []apiextv1beta1.JSON{
+						{Raw: jsonBytes(SemverVersionMajor)},
+						{Raw: jsonBytes(SemverVersionMinor)},
+						{Raw: jsonBytes(SemverVersionPatch)},
+					},
+				},
+				"level": {
+					Type: proto.String,
+					Enum: []apiextv1beta1.JSON{
+						{Raw: jsonBytes(SemverLevelRelease)},
+						{Raw: jsonBytes(SemverLevelReleaseCandidate)},
+						{Raw: jsonBytes(SemverLevelPreview)},
+					},
+				},
 			},
-		},
-		"level": {
-			Type: proto.String,
-			Enum: []apiextv1beta1.JSON{
-				{Raw: jsonBytes(SemverLevelRelease)},
-				{Raw: jsonBytes(SemverLevelReleaseCandidate)},
-				{Raw: jsonBytes(SemverLevelPreview)},
-			},
+			Required: []string{"version", "level"},
 		},
 	},
 }

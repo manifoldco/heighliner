@@ -2,6 +2,7 @@ package svc
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -80,6 +81,15 @@ func (c *Controller) run(ctx context.Context) {
 
 func (c *Controller) onAdd(obj interface{}) {
 	svc := obj.(*v1alpha1.Microservice).DeepCopy()
+	if err := c.annotateMicroservice(svc); err != nil {
+		log.Printf("Error annotating microservice error=%", err)
+		return
+	}
+
+	if _, err := c.patcher.Apply(svc); err != nil {
+		log.Printf("Error applying microservice annotations error=%", err)
+		return
+	}
 
 	log.Printf("Created Microservice %s", svc.Name)
 }
@@ -93,4 +103,25 @@ func (c *Controller) onUpdate(old, new interface{}) {
 func (c *Controller) onDelete(obj interface{}) {
 	svc := obj.(*v1alpha1.Microservice).DeepCopy()
 	log.Printf("Deleting Microservice %s", svc.Name)
+}
+
+func (c *Controller) annotateMicroservice(crd *v1alpha1.Microservice) error {
+	ipName := crd.Spec.ImagePolicy.Name
+
+	if _, err := c.patcher.Apply(crd); err != nil {
+		return err
+	}
+
+	helper, err := c.patcher.Helper(&v1alpha1.ImagePolicy{})
+	if err != nil {
+		return err
+	}
+
+	ip, err := helper.Get(crd.Namespace, ipName, false)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(ip)
+	return nil
 }
