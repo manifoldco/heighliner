@@ -27,6 +27,10 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) 
 	}
 
 	dpl := &v1beta1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "extensions/v1beta1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        crd.Name,
 			Namespace:   crd.Namespace,
