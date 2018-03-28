@@ -121,6 +121,11 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		return nil, err
 	}
 
+	availabilityPolicySpec, err := c.getAvailabilityPolicySpec(crd)
+	if err != nil {
+		return nil, err
+	}
+
 	// TODO(jelmer): currently we need to specify the TypeMeta here. We need to
 	// investigate a way to automate this depending on the passed in Object. The
 	// issue lies within the passed in ClientSet. The ClientSet we've generated
@@ -144,6 +149,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 			},
 		},
 		Spec: v1alpha1.VersionedMicroserviceSpec{
+			Availability: availabilityPolicySpec,
 			Containers: []corev1.Container{
 				{
 					Name:  crd.Name,
@@ -173,4 +179,24 @@ func (c *Controller) getImagePolicy(crd *v1alpha1.Microservice) (*v1alpha1.Image
 	}
 
 	return imagePolicy, nil
+}
+
+func (c *Controller) getAvailabilityPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.AvailabilityPolicySpec, error) {
+	availabilityPolicy := &v1alpha1.AvailabilityPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "AvailabilityPolicy",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+
+	apName := crd.Spec.AvailabilityPolicy.Name
+	if apName == "" {
+		return nil, nil
+	}
+
+	if err := c.patcher.Get(availabilityPolicy, crd.Namespace, apName); err != nil {
+		return nil, err
+	}
+
+	return &availabilityPolicy.Spec, nil
 }

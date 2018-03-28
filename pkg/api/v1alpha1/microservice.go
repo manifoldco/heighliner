@@ -27,7 +27,8 @@ type MicroserviceList struct {
 // MicroserviceSpec represents the specification for a Microservice. It houses
 // all the policies which we'll use to build a VersionedMicroservice.
 type MicroserviceSpec struct {
-	ImagePolicy core.LocalObjectReference `json:"imagePolicy"`
+	ImagePolicy        core.LocalObjectReference `json:"imagePolicy"`
+	AvailabilityPolicy core.LocalObjectReference `json:"availabilityPolicy,omitempty"`
 }
 
 // MicroserviceValidationSchema represents the OpenAPIV3Scheme which

@@ -27,10 +27,10 @@ type VersionedMicroserviceList struct {
 // VersionedMicroserviceSpec represents the specification for a
 // VersionedMicroservice.
 type VersionedMicroserviceSpec struct {
-	Availability *AvailabilitySpec  `json:"availability,omitempty"`
-	Network      *NetworkSpec       `json:"network,omitempty"`
-	Volumes      []corev1.Volume    `json:"volumes,omitempty"`
-	Containers   []corev1.Container `json:"containers"`
+	Availability *AvailabilityPolicySpec `json:"availability,omitempty"`
+	Network      *NetworkSpec            `json:"network,omitempty"`
+	Volumes      []corev1.Volume         `json:"volumes,omitempty"`
+	Containers   []corev1.Container      `json:"containers"`
 }
 
 // VersionedMicroserviceValidationSchema represents the OpenAPIV3Scheme which

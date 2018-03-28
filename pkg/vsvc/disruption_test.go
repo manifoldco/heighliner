@@ -31,7 +31,7 @@ func TestGetPodDisruptionBudget(t *testing.T) {
 	t.Run("with minAvailable configured", func(t *testing.T) {
 		crd := &v1alpha1.VersionedMicroservice{
 			Spec: v1alpha1.VersionedMicroserviceSpec{
-				Availability: &v1alpha1.AvailabilitySpec{
+				Availability: &v1alpha1.AvailabilityPolicySpec{
 					MinAvailable: ptrIntOrStringFromInt(5),
 				},
 			},
@@ -44,7 +44,7 @@ func TestGetPodDisruptionBudget(t *testing.T) {
 	t.Run("with maxUnavailable configured", func(t *testing.T) {
 		crd := &v1alpha1.VersionedMicroservice{
 			Spec: v1alpha1.VersionedMicroserviceSpec{
-				Availability: &v1alpha1.AvailabilitySpec{
+				Availability: &v1alpha1.AvailabilityPolicySpec{
 					MaxUnavailable: ptrIntOrStringFromInt(2),
 				},
 			},
@@ -57,7 +57,7 @@ func TestGetPodDisruptionBudget(t *testing.T) {
 	t.Run("with both values configured", func(t *testing.T) {
 		crd := &v1alpha1.VersionedMicroservice{
 			Spec: v1alpha1.VersionedMicroserviceSpec{
-				Availability: &v1alpha1.AvailabilitySpec{
+				Availability: &v1alpha1.AvailabilityPolicySpec{
 					MaxUnavailable: ptrIntOrStringFromInt(2),
 					MinAvailable:   ptrIntOrStringFromInt(2),
 				},
