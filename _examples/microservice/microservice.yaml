@@ -14,7 +14,7 @@ kind: ImagePolicy
 metadata:
   name: hello-world
 spec:
-  image: hlnr/hello-world:latest
+  image: hlnr/hello-world
   versioningPolicy:
     name: release-minor
 
