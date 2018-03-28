@@ -21,6 +21,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		v1alpha1.SchemeGroupVersion,
 		&v1alpha1.Microservice{},
 		&v1alpha1.MicroserviceList{},
+		&v1alpha1.ImagePolicy{},
+		&v1alpha1.ImagePolicyList{},
 	)
 
 	v1.AddToGroupVersion(scheme, v1alpha1.SchemeGroupVersion)
