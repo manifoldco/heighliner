@@ -23,13 +23,35 @@ status:
 ---
 
 apiVersion: hlnr.io/v1alpha1
+kind: NetworkPolicy
+metadata:
+  name: hello-world
+spec:
+  ingressClass: nginx
+  ports:
+  - name: headless
+    port: 80
+    targetPort: 8080
+  dns:
+  - domain: hello-world.demo.cool
+    ttl: 10
+    disableTLS: false
+    TLSGroup: hello-world
+    port: headless
+  - domain: unsecure-hello-world.demo.cool
+    ttl: 10
+    disableTLS: true
+    port: headless
+
+---
+
+apiVersion: hlnr.io/v1alpha1
 kind: AvailabilityPolicy
 metadata:
   name: hello-world
 spec:
   replicas: 4
   minAvailable: 1
-  maxUnavailable: 1
   restartPolicy: Always
   affinity:
     podAntiAffinity:
@@ -65,6 +87,8 @@ metadata:
   name: hello-world
 spec:
   availabilityPolicy:
+    name: hello-world
+  networkPolicy:
     name: hello-world
   imagePolicy:
     name: hello-world

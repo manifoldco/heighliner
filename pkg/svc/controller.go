@@ -116,12 +116,17 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 }
 
 func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1alpha1.VersionedMicroservice, error) {
-	imagePolicy, err := c.getImagePolicy(crd)
+	availabilityPolicySpec, err := c.getAvailabilityPolicySpec(crd)
 	if err != nil {
 		return nil, err
 	}
 
-	availabilityPolicySpec, err := c.getAvailabilityPolicySpec(crd)
+	networkPolicySpec, err := c.getNetworkPolicySpec(crd)
+	if err != nil {
+		return nil, err
+	}
+
+	containers, err := c.getContainers(crd)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +136,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 	// issue lies within the passed in ClientSet. The ClientSet we've generated
 	// is aware of the new types but this isn't used in the Factory that Kubekit
 	// uses to pull out information.
-	vsvc := &v1alpha1.VersionedMicroservice{
+	return &v1alpha1.VersionedMicroservice{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "VersionedMicroservice",
 			APIVersion: "hlnr.io/v1alpha1",
@@ -150,15 +155,25 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		},
 		Spec: v1alpha1.VersionedMicroserviceSpec{
 			Availability: availabilityPolicySpec,
-			Containers: []corev1.Container{
-				{
-					Name:  crd.Name,
-					Image: imagePolicy.Status.Image,
-				},
-			},
+			Network:      networkPolicySpec,
+			Containers:   containers,
 		},
+	}, nil
+}
+
+func (c *Controller) getContainers(crd *v1alpha1.Microservice) ([]corev1.Container, error) {
+	imagePolicy, err := c.getImagePolicy(crd)
+	if err != nil {
+		return nil, err
 	}
-	return vsvc, nil
+
+	return []corev1.Container{
+		{
+			Name:            crd.Name,
+			Image:           imagePolicy.Status.Image,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+		},
+	}, nil
 }
 
 func (c *Controller) getImagePolicy(crd *v1alpha1.Microservice) (*v1alpha1.ImagePolicy, error) {
@@ -199,4 +214,24 @@ func (c *Controller) getAvailabilityPolicySpec(crd *v1alpha1.Microservice) (*v1a
 	}
 
 	return &availabilityPolicy.Spec, nil
+}
+
+func (c *Controller) getNetworkPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.NetworkPolicySpec, error) {
+	networkPolicy := &v1alpha1.NetworkPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "NetworkPolicy",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+
+	apName := crd.Spec.NetworkPolicy.Name
+	if apName == "" {
+		return nil, nil
+	}
+
+	if err := c.patcher.Get(networkPolicy, crd.Namespace, apName); err != nil {
+		return nil, err
+	}
+
+	return &networkPolicy.Spec, nil
 }

@@ -29,10 +29,20 @@ type MicroserviceList struct {
 type MicroserviceSpec struct {
 	ImagePolicy        core.LocalObjectReference `json:"imagePolicy"`
 	AvailabilityPolicy core.LocalObjectReference `json:"availabilityPolicy,omitempty"`
+	NetworkPolicy      core.LocalObjectReference `json:"networkPolicy,omitempty"`
 }
 
 // MicroserviceValidationSchema represents the OpenAPIV3Scheme which
 // defines the validation for the MicroserviceSpec.
 var MicroserviceValidationSchema = apiextv1beta1.JSONSchemaProps{
 	Required: []string{"imagePolicy"},
+	Properties: map[string]apiextv1beta1.JSONSchemaProps{
+		"imagePolicy":        requiredObjectReference,
+		"availabilityPolicy": requiredObjectReference,
+		"networkPolicy":      requiredObjectReference,
+	},
+}
+
+var requiredObjectReference = apiextv1beta1.JSONSchemaProps{
+	Required: []string{"name"},
 }

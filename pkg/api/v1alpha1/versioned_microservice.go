@@ -28,7 +28,7 @@ type VersionedMicroserviceList struct {
 // VersionedMicroservice.
 type VersionedMicroserviceSpec struct {
 	Availability *AvailabilityPolicySpec `json:"availability,omitempty"`
-	Network      *NetworkSpec            `json:"network,omitempty"`
+	Network      *NetworkPolicySpec      `json:"network,omitempty"`
 	Volumes      []corev1.Volume         `json:"volumes,omitempty"`
 	Containers   []corev1.Container      `json:"containers"`
 }
