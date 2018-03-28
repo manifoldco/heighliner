@@ -12,7 +12,7 @@ type VersioningPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec VersioningSpec `json:"spec"`
+	Spec VersioningPolicySpec `json:"spec"`
 }
 
 // VersioningPolicyList is a list of VersioningPolicy CRDs.
@@ -23,77 +23,77 @@ type VersioningPolicyList struct {
 	Items           []VersioningPolicy `json:"items"`
 }
 
-// VersioningSpec describes the specification for Versioning.
-type VersioningSpec struct {
-	Semver *SemverSource `json:"semver"`
+// VersioningPolicySpec describes the specification for Versioning.
+type VersioningPolicySpec struct {
+	SemVer *SemVerSource `json:"semVer"`
 }
 
 type (
-	// SemverLevel indicates a level which we want to monitor the image registry
+	// SemVerLevel indicates a level which we want to monitor the image registry
 	// for. It should be in the format of format.
 	// Examples:
 	// v1.2.3, v1.2.4-rc.0, v1.2.4-pr.1
 	// 1.2.3, 1.2.4-rc.0, 1.2.4-pr.1
-	SemverLevel string
+	SemVerLevel string
 
-	// SemverVersion represents the type of version we want to monitor for.
-	SemverVersion string
+	// SemVerVersion represents the type of version we want to monitor for.
+	SemVerVersion string
 )
 
 var (
-	// SemverLevelRelease is used for a release that is ready to be rolled out
+	// SemVerLevelRelease is used for a release that is ready to be rolled out
 	// to production.
-	SemverLevelRelease SemverLevel = "release"
+	SemVerLevelRelease SemVerLevel = "release"
 
-	// SemverLevelReleaseCandidate is used for a release-candidate that is ready
+	// SemVerLevelReleaseCandidate is used for a release-candidate that is ready
 	// for QA.
-	SemverLevelReleaseCandidate SemverLevel = "rc"
+	SemVerLevelReleaseCandidate SemVerLevel = "rc"
 
-	// SemverLevelPreview is used for a preview release. This is generally
+	// SemVerLevelPreview is used for a preview release. This is generally
 	// associated with development deploys.
-	SemverLevelPreview SemverLevel = "preview"
+	SemVerLevelPreview SemVerLevel = "preview"
 
-	// SemverVersionMajor indicates that we will release major, minor and patch
+	// SemVerVersionMajor indicates that we will release major, minor and patch
 	// releases.
-	SemverVersionMajor SemverVersion = "major"
+	SemVerVersionMajor SemVerVersion = "major"
 
-	// SemverVersionMinor indicates that we will release minor and patch
+	// SemVerVersionMinor indicates that we will release minor and patch
 	// releases.
-	SemverVersionMinor SemverVersion = "minor"
+	SemVerVersionMinor SemVerVersion = "minor"
 
-	// SemverVersionPatch indicates that we will release only patch releases.
-	SemverVersionPatch SemverVersion = "patch"
+	// SemVerVersionPatch indicates that we will release only patch releases.
+	SemVerVersionPatch SemVerVersion = "patch"
 )
 
-// SemverSource is a versioning policy based on semver.
+// SemVerSource is a versioning policy based on semver.
 // When semver is selected, Heighliner can watch for images on 3 different
 // levels.
 // When `release` level is selected, we will only get
-type SemverSource struct {
-	Version SemverVersion `json:"version"`
-	Level   SemverLevel   `json:"level"`
+type SemVerSource struct {
+	Version SemVerVersion `json:"version"`
+	Level   SemVerLevel   `json:"level"`
 }
 
 // VersioningPolicyValidationSchema represents the OpenAPIV3Schema validation for
 // the NetworkPolicy CRD.
 var VersioningPolicyValidationSchema = apiextv1beta1.JSONSchemaProps{
 	Properties: map[string]apiextv1beta1.JSONSchemaProps{
-		"semver": {
+		"semVer": {
 			Properties: map[string]apiextv1beta1.JSONSchemaProps{
 				"version": {
 					Type: proto.String,
 					Enum: []apiextv1beta1.JSON{
-						{Raw: jsonBytes(SemverVersionMajor)},
-						{Raw: jsonBytes(SemverVersionMinor)},
-						{Raw: jsonBytes(SemverVersionPatch)},
+						{Raw: jsonBytes(SemVerVersionMajor)},
+						{Raw: jsonBytes(SemVerVersionMinor)},
+						{Raw: jsonBytes(SemVerVersionPatch)},
 					},
 				},
 				"level": {
 					Type: proto.String,
 					Enum: []apiextv1beta1.JSON{
-						{Raw: jsonBytes(SemverLevelRelease)},
-						{Raw: jsonBytes(SemverLevelReleaseCandidate)},
-						{Raw: jsonBytes(SemverLevelPreview)},
+						{Raw: jsonBytes(SemVerLevelRelease)},
+						{Raw: jsonBytes(SemVerLevelReleaseCandidate)},
+						{Raw: jsonBytes(SemVerLevelPreview)},
 					},
 				},
 			},

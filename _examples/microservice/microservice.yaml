@@ -3,7 +3,7 @@ kind: VersioningPolicy
 metadata:
   name: release-minor
 spec:
-  semverRef:
+  semVer:
     version: minor
     level: release
 
