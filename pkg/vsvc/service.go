@@ -45,6 +45,10 @@ func getService(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 	}
 
 	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        crd.Name,
 			Namespace:   crd.Namespace,

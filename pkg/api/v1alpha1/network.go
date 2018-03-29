@@ -12,7 +12,7 @@ type NetworkPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec NetworkSpec `json:"spec"`
+	Spec NetworkPolicySpec `json:"spec"`
 }
 
 // NetworkPolicyList is a list of NetworkPolicy CRDs.
@@ -23,8 +23,8 @@ type NetworkPolicyList struct {
 	Items           []NetworkPolicy `json:"items"`
 }
 
-// NetworkSpec describes the specification for Network.
-type NetworkSpec struct {
+// NetworkPolicySpec describes the specification for Network.
+type NetworkPolicySpec struct {
 	IngressClass string        `json:"ingressClass"`
 	Ports        []NetworkPort `json:"ports"`
 	DNS          []NetworkDNS  `json:"dns"`
@@ -76,12 +76,7 @@ type NetworkDNS struct {
 var NetworkPolicyValidationSchema = apiextv1beta1.JSONSchemaProps{
 	Properties: map[string]apiextv1beta1.JSONSchemaProps{
 		"ingressClass": {
-			Type: "string",
-			Enum: []apiextv1beta1.JSON{
-				{
-					Raw: jsonBytes("nginx"),
-				},
-			},
+			Type: proto.String,
 		},
 		"ports": {
 			Items: &apiextv1beta1.JSONSchemaPropsOrArray{

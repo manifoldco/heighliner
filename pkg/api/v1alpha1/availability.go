@@ -14,7 +14,7 @@ type AvailabilityPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec AvailabilitySpec `json:"spec"`
+	Spec AvailabilityPolicySpec `json:"spec"`
 }
 
 // AvailabilityPolicyList is a list of AvailabilityPolicy CRDs.
@@ -25,8 +25,8 @@ type AvailabilityPolicyList struct {
 	Items           []NetworkPolicy `json:"items"`
 }
 
-// AvailabilitySpec is the specification for Availability.
-type AvailabilitySpec struct {
+// AvailabilityPolicySpec is the specification for Availability.
+type AvailabilityPolicySpec struct {
 	// Number of desired replicas of the service.
 	Replicas *int32 `json:"replicas"`
 
@@ -54,10 +54,10 @@ type AvailabilitySpec struct {
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 }
 
-// DefaultAvailabilitySpec is the default availability spec that will be used
-// when it's not defined.
+// DefaultAvailabilityPolicySpec is the default availability spec that will be
+// used when it's not defined.
 // Affinity is DeploymentSpecific so will be filled in later on.
-var DefaultAvailabilitySpec = AvailabilitySpec{
+var DefaultAvailabilityPolicySpec = AvailabilityPolicySpec{
 	Replicas:       func(i int32) *int32 { return &i }(2),
 	MinAvailable:   ptrIntOrString(intstr.FromInt(1)),
 	MaxUnavailable: ptrIntOrString(intstr.FromString("25%")),

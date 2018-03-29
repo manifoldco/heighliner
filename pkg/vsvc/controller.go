@@ -31,7 +31,7 @@ type Controller struct {
 
 // NewController returns a new VersionedMicroservice Controller.
 func NewController(cfg *rest.Config, cs kubernetes.Interface, namespace string) (*Controller, error) {
-	rc, err := kubekit.RESTClient(cfg, &v1alpha1.SchemeGroupVersion, AddToScheme)
+	rc, err := kubekit.RESTClient(cfg, &v1alpha1.SchemeGroupVersion, v1alpha1.AddToScheme)
 	if err != nil {
 		return nil, err
 	}

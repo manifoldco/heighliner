@@ -59,6 +59,10 @@ func getPodDisruptionBudget(crd *v1alpha1.VersionedMicroservice) (runtime.Object
 }
 
 var defaultDisruptionBudget = &v1beta1.PodDisruptionBudget{
+	TypeMeta: metav1.TypeMeta{
+		Kind:       "PodDisruptionBudget",
+		APIVersion: "policy/v1beta1",
+	},
 	Spec: v1beta1.PodDisruptionBudgetSpec{
 		MinAvailable: ptrIntOrStringFromInt(1),
 		Selector: &metav1.LabelSelector{

@@ -1,7 +1,7 @@
 package v1alpha1
 
 import (
-	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/apis/core"
 )
@@ -12,7 +12,8 @@ type ImagePolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec ImageSpec `json:"spec"`
+	Spec   ImagePolicySpec   `json:"spec"`
+	Status ImagePolicyStatus `json:"status"`
 }
 
 // ImagePolicyList is a list of ImagePolicy CRDs.
@@ -23,15 +24,33 @@ type ImagePolicyList struct {
 	Items           []ImagePolicy `json:"items"`
 }
 
-// ImageSpec describes the specification for Image.
-type ImageSpec struct {
+// ImagePolicySpec describes the specification for Image.
+type ImagePolicySpec struct {
 	Image            string                      `json:"image"`
 	ImagePullSecrets []core.LocalObjectReference `json:"imagePullSecrets"`
 	VersioningPolicy core.LocalObjectReference   `json:"versioningPolicy"`
 }
 
+// ImagePolicyStatus represents the latest version of the ImagePolicy that
+// matches the VersioningPolicy associated with it.
+// The Status will be used by the Microservice component to build the actual
+// Deployment.
+type ImagePolicyStatus struct {
+	Image string `json:"image"`
+}
+
 // ImagePolicyValidationSchema represents the OpenAPIV3Schema validation for
 // the NetworkPolicy CRD.
-var ImagePolicyValidationSchema = apiextv1beta1.JSONSchemaProps{
-	Required: []string{"image", "versioningPolicy"},
+var ImagePolicyValidationSchema = &v1beta1.CustomResourceValidation{
+	OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
+		Properties: map[string]v1beta1.JSONSchemaProps{
+			"spec": {
+				Required: []string{"image", "versioningPolicy"},
+			},
+			"status": {
+				Required: []string{"image"},
+			},
+		},
+		Required: []string{"spec"},
+	},
 }

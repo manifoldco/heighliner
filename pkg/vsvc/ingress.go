@@ -41,6 +41,10 @@ func getIngress(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 	annotations["external-dns.alpha.kubernetes.io/ttl"] = ttlValue(dns[0].TTL)
 
 	ing := &v1beta1.Ingress{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Ingress",
+			APIVersion: "extensions/v1beta1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        crd.Name,
 			Namespace:   crd.Namespace,
