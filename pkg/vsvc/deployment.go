@@ -15,7 +15,7 @@ import (
 func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 	availability := crd.Spec.Availability
 	if availability == nil {
-		availability = &v1alpha1.DefaultAvailabilitySpec
+		availability = &v1alpha1.DefaultAvailabilityPolicySpec
 	}
 
 	labels := k8sutils.Labels(crd.Labels, crd.ObjectMeta)

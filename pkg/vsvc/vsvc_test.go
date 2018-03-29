@@ -62,7 +62,7 @@ func TestCRD_VersionedMicroservice_Network(t *testing.T) {
 		for _, d := range data {
 			crd := &v1alpha1.VersionedMicroservice{
 				Spec: v1alpha1.VersionedMicroserviceSpec{
-					Network: &v1alpha1.NetworkSpec{
+					Network: &v1alpha1.NetworkPolicySpec{
 						IngressClass: d.class,
 					},
 					Containers: []corev1.Container{
