@@ -43,36 +43,3 @@ func TestCRD_VersionedMicroservice_Containers(t *testing.T) {
 		}
 	})
 }
-
-func TestCRD_VersionedMicroservice_Network(t *testing.T) {
-	validator, err := kubetest.GetValidator(vsvc.CustomResource)
-	if err != nil {
-		t.Fatalf("Couldn't get validator: %s", err)
-	}
-
-	t.Run("ingressClass", func(t *testing.T) {
-		data := []struct {
-			class string
-			err   bool
-		}{
-			{"invalid", true},
-			{"nginx", false},
-		}
-
-		for _, d := range data {
-			crd := &v1alpha1.VersionedMicroservice{
-				Spec: v1alpha1.VersionedMicroserviceSpec{
-					Network: &v1alpha1.NetworkPolicySpec{
-						IngressClass: d.class,
-					},
-					Containers: []corev1.Container{
-						{},
-					},
-				},
-			}
-			if err := validation.ValidateCustomResource(crd, validator); (!d.err && err != nil) || (d.err && err == nil) {
-				t.Errorf("Failed on '%s': %s", d.class, err)
-			}
-		}
-	})
-}
