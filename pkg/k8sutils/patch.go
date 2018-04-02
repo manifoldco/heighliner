@@ -12,8 +12,7 @@ import (
 func CleanupPatchAnnotations(patch []byte, name string) ([]byte, error) {
 	data := map[string]interface{}{}
 	if err := json.Unmarshal(patch, &data); err != nil {
-		fmt.Println(err)
-		return nil, err
+		return patch, err
 	}
 
 	data = cleanKeys(data, fmt.Sprintf("kubekit-%s/last-applied-configuration", name), "status", "$retainKeys")

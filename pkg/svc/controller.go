@@ -260,5 +260,12 @@ func (c *Controller) getConfigPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.
 		return nil, err
 	}
 
+	// TODO(jelmer): currently we're setting the last-updated annotation here.
+	// This makes sure that the Deployment gets re-deployed when there is an
+	// update to the configPolicy.
+	// In the future, we'll roll out new versions on changes and we can drop
+	// this annotation.
+	crd.Annotations["hlnr-config-policy/last-updated"] = configPolicy.Status.LastUpdated.String()
+
 	return &configPolicy.Spec, nil
 }

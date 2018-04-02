@@ -91,6 +91,9 @@ func (c *Controller) run(ctx context.Context) {
 func (c *Controller) applyCRD(obj interface{}, opts ...patcher.OptionFunc) error {
 	vsvc := obj.(*v1alpha1.VersionedMicroservice).DeepCopy()
 
+	// This is managed by a kubekit controller, lets remove that annotation.
+	delete(vsvc.Annotations, "kubekit-hlnr-microservice/last-applied-configuration")
+
 	if err := updateObject("Deployment", vsvc, c.patcher, getDeployment); err != nil {
 		return err
 	}
@@ -127,7 +130,7 @@ func updateObject(name string, vsvc *v1alpha1.VersionedMicroservice, p *patcher.
 		return err
 	}
 
-	patch, err = k8sutils.CleanupPatchAnnotations(patch, "hlnr-versioned-microservice")
+	patch, _ = k8sutils.CleanupPatchAnnotations(patch, "hlnr-versioned-microservice")
 	patch, err = k8sutils.CleanupPatchAnnotations(patch, "hlnr-microservice")
 	if err == nil && !patcher.IsEmptyPatch(patch) {
 		log.Printf("Synced %s %s with new data: %s", name, vsvc.Name, string(patch))
