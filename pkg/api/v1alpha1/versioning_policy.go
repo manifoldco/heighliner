@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"github.com/manifoldco/heighliner/pkg/k8sutils"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kube-openapi/pkg/util/proto"
@@ -83,17 +84,17 @@ var VersioningPolicyValidationSchema = apiextv1beta1.JSONSchemaProps{
 				"version": {
 					Type: proto.String,
 					Enum: []apiextv1beta1.JSON{
-						{Raw: jsonBytes(SemVerVersionMajor)},
-						{Raw: jsonBytes(SemVerVersionMinor)},
-						{Raw: jsonBytes(SemVerVersionPatch)},
+						{Raw: k8sutils.JSONBytes(SemVerVersionMajor)},
+						{Raw: k8sutils.JSONBytes(SemVerVersionMinor)},
+						{Raw: k8sutils.JSONBytes(SemVerVersionPatch)},
 					},
 				},
 				"level": {
 					Type: proto.String,
 					Enum: []apiextv1beta1.JSON{
-						{Raw: jsonBytes(SemVerLevelRelease)},
-						{Raw: jsonBytes(SemVerLevelReleaseCandidate)},
-						{Raw: jsonBytes(SemVerLevelPreview)},
+						{Raw: k8sutils.JSONBytes(SemVerLevelRelease)},
+						{Raw: k8sutils.JSONBytes(SemVerLevelReleaseCandidate)},
+						{Raw: k8sutils.JSONBytes(SemVerLevelPreview)},
 					},
 				},
 			},

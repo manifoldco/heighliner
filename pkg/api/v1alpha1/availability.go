@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"github.com/manifoldco/heighliner/pkg/k8sutils"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -59,14 +61,14 @@ type AvailabilityPolicySpec struct {
 // Affinity is DeploymentSpecific so will be filled in later on.
 var DefaultAvailabilityPolicySpec = AvailabilityPolicySpec{
 	Replicas:       func(i int32) *int32 { return &i }(2),
-	MinAvailable:   ptrIntOrString(intstr.FromInt(1)),
-	MaxUnavailable: ptrIntOrString(intstr.FromString("25%")),
+	MinAvailable:   k8sutils.PtrIntOrString(intstr.FromInt(1)),
+	MaxUnavailable: k8sutils.PtrIntOrString(intstr.FromString("25%")),
 	RestartPolicy:  corev1.RestartPolicyAlways,
 	DeploymentStrategy: v1beta1.DeploymentStrategy{
 		Type: v1beta1.RollingUpdateDeploymentStrategyType,
 		RollingUpdate: &v1beta1.RollingUpdateDeployment{
-			MaxUnavailable: ptrIntOrString(intstr.FromString("25%")),
-			MaxSurge:       ptrIntOrString(intstr.FromString("25%")),
+			MaxUnavailable: k8sutils.PtrIntOrString(intstr.FromString("25%")),
+			MaxSurge:       k8sutils.PtrIntOrString(intstr.FromString("25%")),
 		},
 	},
 }
