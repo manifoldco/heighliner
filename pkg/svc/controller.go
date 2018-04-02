@@ -126,6 +126,11 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		return nil, err
 	}
 
+	configPolicySpec, err := c.getConfigPolicySpec(crd)
+	if err != nil {
+		return nil, err
+	}
+
 	containers, err := c.getContainers(crd)
 	if err != nil {
 		return nil, err
@@ -156,6 +161,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		Spec: v1alpha1.VersionedMicroserviceSpec{
 			Availability: availabilityPolicySpec,
 			Network:      networkPolicySpec,
+			Config:       configPolicySpec,
 			Containers:   containers,
 		},
 	}, nil
@@ -234,4 +240,24 @@ func (c *Controller) getNetworkPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1
 	}
 
 	return &networkPolicy.Spec, nil
+}
+
+func (c *Controller) getConfigPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.ConfigPolicySpec, error) {
+	configPolicy := &v1alpha1.ConfigPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigPolicy",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+
+	apName := crd.Spec.ConfigPolicy.Name
+	if apName == "" {
+		return nil, nil
+	}
+
+	if err := c.patcher.Get(configPolicy, crd.Namespace, apName); err != nil {
+		return nil, err
+	}
+
+	return &configPolicy.Spec, nil
 }

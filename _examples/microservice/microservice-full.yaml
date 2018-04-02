@@ -23,6 +23,17 @@ status:
 ---
 
 apiVersion: hlnr.io/v1alpha1
+kind: ConfigPolicy
+metadata:
+  name: hello-world
+spec:
+  env:
+  - name: MY_KEY
+    value: MY_VALUE
+
+---
+
+apiVersion: hlnr.io/v1alpha1
 kind: NetworkPolicy
 metadata:
   name: hello-world
@@ -91,4 +102,6 @@ spec:
   networkPolicy:
     name: hello-world
   imagePolicy:
+    name: hello-world
+  configPolicy:
     name: hello-world

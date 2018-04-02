@@ -443,6 +443,7 @@ func (in *MicroserviceSpec) DeepCopyInto(out *MicroserviceSpec) {
 	out.ImagePolicy = in.ImagePolicy
 	out.AvailabilityPolicy = in.AvailabilityPolicy
 	out.NetworkPolicy = in.NetworkPolicy
+	out.ConfigPolicy = in.ConfigPolicy
 	return
 }
 
@@ -671,11 +672,13 @@ func (in *VersionedMicroserviceSpec) DeepCopyInto(out *VersionedMicroserviceSpec
 			(*in).DeepCopyInto(*out)
 		}
 	}
-	if in.Volumes != nil {
-		in, out := &in.Volumes, &out.Volumes
-		*out = make([]v1.Volume, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+	if in.Config != nil {
+		in, out := &in.Config, &out.Config
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ConfigPolicySpec)
+			(*in).DeepCopyInto(*out)
 		}
 	}
 	if in.Containers != nil {

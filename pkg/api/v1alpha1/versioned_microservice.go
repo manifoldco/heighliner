@@ -29,7 +29,7 @@ type VersionedMicroserviceList struct {
 type VersionedMicroserviceSpec struct {
 	Availability *AvailabilityPolicySpec `json:"availability,omitempty"`
 	Network      *NetworkPolicySpec      `json:"network,omitempty"`
-	Volumes      []corev1.Volume         `json:"volumes,omitempty"`
+	Config       *ConfigPolicySpec       `json:"config,omitempty"`
 	Containers   []corev1.Container      `json:"containers"`
 }
 
@@ -39,6 +39,7 @@ var VersionedMicroserviceValidationSchema = apiextv1beta1.JSONSchemaProps{
 	Properties: map[string]apiextv1beta1.JSONSchemaProps{
 		"availability": AvailabilityPolicyValidationSchema,
 		"network":      NetworkPolicyValidationSchema,
+		"config":       *ConfigPolicyValidationSchema.OpenAPIV3Schema,
 		"containers": {
 			MinItems: ptrInt64(1),
 		},
