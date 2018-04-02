@@ -59,9 +59,9 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) 
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
-					// TODO(jelmer) make this configurable through a security
-					// policy
-					AutomountServiceAccountToken: func(b bool) *bool { return &b }(false),
+					ServiceAccountName:           crd.Spec.Security.ServiceAccountName,
+					AutomountServiceAccountToken: k8sutils.PtrBool(crd.Spec.Security.AutomountServiceAccountToken),
+					SecurityContext:              crd.Spec.Security.SecurityContext,
 					Affinity:                     affinity,
 					RestartPolicy:                availability.RestartPolicy,
 					Containers:                   crd.Spec.Containers,
@@ -86,6 +86,10 @@ func populateContainers(crd *v1alpha1.VersionedMicroservice) {
 
 		// reassign the container in the CRD
 		crd.Spec.Containers[i] = container
+	}
+
+	if crd.Spec.Security == nil {
+		crd.Spec.Security = &v1alpha1.SecurityPolicySpec{}
 	}
 }
 

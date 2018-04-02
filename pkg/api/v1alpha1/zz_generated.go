@@ -444,6 +444,7 @@ func (in *MicroserviceSpec) DeepCopyInto(out *MicroserviceSpec) {
 	out.AvailabilityPolicy = in.AvailabilityPolicy
 	out.NetworkPolicy = in.NetworkPolicy
 	out.ConfigPolicy = in.ConfigPolicy
+	out.SecurityPolicy = in.SecurityPolicy
 	return
 }
 
@@ -763,6 +764,15 @@ func (in *VersionedMicroserviceSpec) DeepCopyInto(out *VersionedMicroserviceSpec
 			*out = nil
 		} else {
 			*out = new(ConfigPolicySpec)
+			(*in).DeepCopyInto(*out)
+		}
+	}
+	if in.Security != nil {
+		in, out := &in.Security, &out.Security
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(SecurityPolicySpec)
 			(*in).DeepCopyInto(*out)
 		}
 	}

@@ -31,6 +31,7 @@ type MicroserviceSpec struct {
 	AvailabilityPolicy core.LocalObjectReference `json:"availabilityPolicy,omitempty"`
 	NetworkPolicy      core.LocalObjectReference `json:"networkPolicy,omitempty"`
 	ConfigPolicy       core.LocalObjectReference `json:"configPolicy,omitempty"`
+	SecurityPolicy     core.LocalObjectReference `json:"securityPolicy,omitempty"`
 }
 
 // MicroserviceValidationSchema represents the OpenAPIV3Scheme which

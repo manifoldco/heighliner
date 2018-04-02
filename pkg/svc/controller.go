@@ -123,6 +123,11 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		return nil, err
 	}
 
+	securityPolicySpec, err := c.getSecurityPolicySpec(crd)
+	if err != nil {
+		return nil, err
+	}
+
 	configPolicySpec, err := c.getConfigPolicySpec(crd)
 	if err != nil {
 		return nil, err
@@ -163,6 +168,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 			Availability: availabilityPolicySpec,
 			Network:      networkPolicySpec,
 			Config:       configPolicySpec,
+			Security:     securityPolicySpec,
 			Containers:   containers,
 		},
 	}, nil
@@ -268,4 +274,24 @@ func (c *Controller) getConfigPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.
 	crd.Annotations["hlnr-config-policy/last-updated"] = configPolicy.Status.LastUpdated.String()
 
 	return &configPolicy.Spec, nil
+}
+
+func (c *Controller) getSecurityPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.SecurityPolicySpec, error) {
+	securityPolicy := &v1alpha1.SecurityPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "SecurityPolicy",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+
+	apName := crd.Spec.SecurityPolicy.Name
+	if apName == "" {
+		return nil, nil
+	}
+
+	if err := c.patcher.Get(securityPolicy, crd.Namespace, apName); err != nil {
+		return nil, err
+	}
+
+	return &securityPolicy.Spec, nil
 }

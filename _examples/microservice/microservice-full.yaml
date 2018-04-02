@@ -23,6 +23,15 @@ status:
 ---
 
 apiVersion: hlnr.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: hello-world
+spec:
+  automountServiceAccountToken: false
+
+---
+
+apiVersion: hlnr.io/v1alpha1
 kind: ConfigPolicy
 metadata:
   name: hello-world
@@ -104,4 +113,6 @@ spec:
   imagePolicy:
     name: hello-world
   configPolicy:
+    name: hello-world
+  securityPolicy:
     name: hello-world
