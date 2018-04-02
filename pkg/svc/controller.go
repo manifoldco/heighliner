@@ -104,12 +104,9 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 		return err
 	}
 
-	if !patcher.IsEmptyPatch(patch) {
-		cleanedPatch, err := k8sutils.CleanupPatchAnnotations(patch, "hlnr-microservice")
-		if err != nil {
-			cleanedPatch = patch
-		}
-		log.Printf("Synced Microservice %s with new data: %s", svc.Name, string(cleanedPatch))
+	patch, err = k8sutils.CleanupPatchAnnotations(patch, "hlnr-microservice")
+	if err == nil && !patcher.IsEmptyPatch(patch) {
+		log.Printf("Synced Microservice %s with new data: %s", vsvc.Name, string(patch))
 	}
 
 	return nil
@@ -136,6 +133,10 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		return nil, err
 	}
 
+	annotations := crd.Annotations
+	delete(annotations, "kubekit-hlnr-microservice/last-applied-configuration")
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
 	// TODO(jelmer): currently we need to specify the TypeMeta here. We need to
 	// investigate a way to automate this depending on the passed in Object. The
 	// issue lies within the passed in ClientSet. The ClientSet we've generated
@@ -147,7 +148,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 			APIVersion: "hlnr.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: crd.Annotations,
+			Annotations: annotations,
 			Labels:      crd.Labels,
 			Name:        crd.Name,
 			Namespace:   crd.Namespace,

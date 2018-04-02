@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
+	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/errors"
@@ -71,42 +72,25 @@ func (c *Controller) run(ctx context.Context) {
 		c.namespace,
 		&CustomResource,
 		cache.ResourceEventHandlerFuncs{
-			AddFunc:    c.onAdd,
-			UpdateFunc: c.onUpdate,
-			DeleteFunc: c.onDelete,
+			AddFunc: func(obj interface{}) {
+				c.applyCRD(obj, patcher.DisableUpdate())
+			},
+			UpdateFunc: func(old, new interface{}) {
+				c.applyCRD(new, patcher.DisableCreate())
+			},
+			DeleteFunc: func(obj interface{}) {
+				svc := obj.(*v1alpha1.VersionedMicroservice).DeepCopy()
+				log.Printf("Deleting VersionedMicroservice %s", svc.Name)
+			},
 		},
 	)
 
 	go watcher.Run(ctx.Done())
 }
 
-func (c *Controller) onAdd(obj interface{}) {
+func (c *Controller) applyCRD(obj interface{}, opts ...patcher.OptionFunc) error {
 	vsvc := obj.(*v1alpha1.VersionedMicroservice).DeepCopy()
 
-	if err := c.applyCRD(vsvc, patcher.DisableUpdate()); err != nil {
-		log.Printf("Error deploying VersionedMicroservice %s: %s", vsvc.Name, err)
-		return
-	}
-
-	log.Printf("Deployed VersionedMicroservice %s", vsvc.Name)
-}
-
-func (c *Controller) onUpdate(old, new interface{}) {
-	vsvc := new.(*v1alpha1.VersionedMicroservice).DeepCopy()
-
-	if err := c.applyCRD(vsvc, patcher.DisableCreate()); err != nil {
-		log.Printf("Error updating VersionedMicroservice %s: %s", vsvc.Name, err)
-	}
-
-	log.Printf("Synced VersionedMicroservice %s", vsvc.Name)
-}
-
-func (c *Controller) onDelete(obj interface{}) {
-	vsvc := obj.(*v1alpha1.VersionedMicroservice).DeepCopy()
-	log.Printf("Deleting VersionedMicroservice %s", vsvc.Name)
-}
-
-func (c *Controller) applyCRD(vsvc *v1alpha1.VersionedMicroservice, opts ...patcher.OptionFunc) error {
 	if err := updateObject("Deployment", vsvc, c.patcher, getDeployment); err != nil {
 		return err
 	}
@@ -137,9 +121,16 @@ func updateObject(name string, vsvc *v1alpha1.VersionedMicroservice, p *patcher.
 		return err
 	}
 
-	if _, err := p.Apply(obj, opts...); err != nil && !errors.IsNoObjectGiven(err) {
+	patch, err := p.Apply(obj, opts...)
+	if err != nil && !errors.IsNoObjectGiven(err) {
 		log.Printf("Could not apply %s for %s: %s", name, vsvc.Name, err)
 		return err
+	}
+
+	patch, err = k8sutils.CleanupPatchAnnotations(patch, "hlnr-versioned-microservice")
+	patch, err = k8sutils.CleanupPatchAnnotations(patch, "hlnr-microservice")
+	if err == nil && !patcher.IsEmptyPatch(patch) {
+		log.Printf("Synced %s %s with new data: %s", name, vsvc.Name, string(patch))
 	}
 
 	return nil

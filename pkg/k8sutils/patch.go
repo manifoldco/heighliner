@@ -16,23 +16,44 @@ func CleanupPatchAnnotations(patch []byte, name string) ([]byte, error) {
 		return nil, err
 	}
 
-	if metaRaw, ok := data["metadata"]; ok {
-		meta := metaRaw.(map[string]interface{})
-		if annRaw, ok := meta["annotations"]; ok {
-			ann := annRaw.(map[string]interface{})
-			delete(ann, fmt.Sprintf("kubekit-%s/last-applied-configuration", name))
+	data = cleanKeys(data, fmt.Sprintf("kubekit-%s/last-applied-configuration", name), "status", "$retainKeys")
+	return json.Marshal(data)
+}
 
-			meta["annotations"] = ann
-			if len(ann) == 0 {
-				delete(meta, "annotations")
-			}
+// cleanKeys is a recursive function which cleans specific keys from a nested
+// map.
+func cleanKeys(data map[string]interface{}, keys ...string) map[string]interface{} {
+	keyData := map[string]interface{}{}
+
+	for k, v := range data {
+		if cleanupKey(k, keys...) {
+			continue
 		}
 
-		data["metadata"] = meta
-		if len(meta) == 0 {
-			delete(data, "metadata")
+		valueData := v
+		if rawData, ok := v.(map[string]interface{}); ok {
+			mappedData := cleanKeys(rawData, keys...)
+			if len(mappedData) == 0 {
+				continue
+			}
+
+			valueData = mappedData
+		}
+
+		if valueData != nil {
+			keyData[k] = valueData
 		}
 	}
 
-	return json.Marshal(data)
+	return keyData
+}
+
+func cleanupKey(key string, keys ...string) bool {
+	for _, k := range keys {
+		if k == key {
+			return true
+		}
+	}
+
+	return false
 }
