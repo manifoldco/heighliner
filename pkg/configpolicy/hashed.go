@@ -2,7 +2,9 @@ package configpolicy
 
 import (
 	"crypto/md5"
+	"fmt"
 	"io"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,31 +24,94 @@ func getEnvVarHash(p objectGetter, namespace string, envs []corev1.EnvVar) ([]by
 	for _, env := range envs {
 		value := env.Value
 		if env.ValueFrom != nil {
-			byteValue, err := valueFromSource(p, namespace, env)
+			byteValue, err := valueFromEnvVar(p, namespace, env)
 			if err != nil {
 				return nil, err
 			}
 			value = string(byteValue)
 		}
 
-		io.WriteString(h, value)
+		io.WriteString(h, fmt.Sprintf("%s:%s;", env.Name, value))
 	}
 
 	return h.Sum(nil), nil
 }
 
 func getEnvFromSourceHash(p objectGetter, namespace string, envs []corev1.EnvFromSource) ([]byte, error) {
-	return nil, nil
+	h := md5.New()
+
+	// the array of references is already sorted, no need to rearrange these
+	for _, env := range envs {
+		values, err := valuesFromSource(p, namespace, env)
+		if err != nil {
+			return nil, err
+		}
+
+		// the data for the source values is a map. Ranging over maps is random
+		// so we need to sort it to make sure we always have the same end
+		// result.
+		sortedKeys := sort.StringSlice{}
+		for k := range values {
+			sortedKeys = append(sortedKeys, k)
+		}
+		sortedKeys.Sort()
+
+		for _, mapKey := range sortedKeys {
+			io.WriteString(h, fmt.Sprintf("%s:%s;", mapKey, string(values[mapKey])))
+		}
+	}
+
+	return h.Sum(nil), nil
 }
 
-func valueFromSource(p objectGetter, ns string, env corev1.EnvVar) ([]byte, error) {
+func valuesFromSource(p objectGetter, ns string, env corev1.EnvFromSource) (map[string][]byte, error) {
+	data := map[string][]byte{}
+	switch {
+	case env.ConfigMapRef != nil:
+		cmr := env.ConfigMapRef
+		config := &corev1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+			},
+		}
+
+		if err := p.Get(config, ns, cmr.Name); err != nil {
+			return nil, err
+		}
+
+		for k, v := range config.Data {
+			data[fmt.Sprintf("%s%s", env.Prefix, k)] = []byte(v)
+		}
+	case env.SecretRef != nil:
+		sr := env.SecretRef
+
+		secret := &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+		}
+
+		if err := p.Get(secret, ns, sr.Name); err != nil {
+			return nil, err
+		}
+
+		data = secret.Data
+	}
+
+	return data, nil
+}
+
+func valueFromEnvVar(p objectGetter, ns string, env corev1.EnvVar) ([]byte, error) {
 	if env.ValueFrom == nil {
 		return nil, nil
 	}
 	vf := env.ValueFrom
 
 	var data []byte
-	if vf.ConfigMapKeyRef != nil {
+	switch {
+	case vf.ConfigMapKeyRef != nil:
 		ckr := vf.ConfigMapKeyRef
 		config := &corev1.ConfigMap{
 			TypeMeta: metav1.TypeMeta{
@@ -63,7 +128,7 @@ func valueFromSource(p objectGetter, ns string, env corev1.EnvVar) ([]byte, erro
 
 		// TODO(jelmer): in 1.10 there's `BinaryData`
 		data = []byte(config.Data[ckr.Key])
-	} else if vf.SecretKeyRef != nil {
+	case vf.SecretKeyRef != nil:
 		skr := vf.SecretKeyRef
 		secret := &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{

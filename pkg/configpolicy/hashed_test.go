@@ -33,7 +33,7 @@ func TestHashed_GetEnvVarHash(t *testing.T) {
 		}
 
 		// concatenation of secrets requested above
-		expected := fmt.Sprintf("%x", md5.Sum([]byte("SUPERSECRET_VALUESUPERSECRET")))
+		expected := fmt.Sprintf("%x", md5.Sum([]byte("MY_NEW_SECRET:SUPERSECRET_VALUE;MY_SECRET:SUPERSECRET;")))
 		if hashString := fmt.Sprintf("%x", hash); hashString != expected {
 			t.Errorf("Expected hash to equal '%s', got '%s'", expected, hashString)
 		}
@@ -44,6 +44,7 @@ func TestHashed_GetEnvVarHash(t *testing.T) {
 		client.registerSecret("my-secret", "SUPER_KEY", "super-value")
 		client.registerSecret("my-secret", "SECRET_KEY", "super-value")
 		client.registerSecret("my-second-secret", "SECRET_KEY", "secret-value")
+		expected := fmt.Sprintf("%x", md5.Sum([]byte("MY_NEW_SECRET:super-value;MY_SECRET:secret-value;")))
 
 		data := []corev1.EnvVar{
 			{
@@ -75,8 +76,6 @@ func TestHashed_GetEnvVarHash(t *testing.T) {
 			t.Fatalf("Expected no error, got %s", err)
 		}
 
-		// concatenation of secrets requested above
-		expected := fmt.Sprintf("%x", md5.Sum([]byte("super-valuesecret-value")))
 		if hashString := fmt.Sprintf("%x", hash); hashString != expected {
 			t.Errorf("Expected hash to equal '%s', got '%s'", expected, hashString)
 		}
@@ -101,11 +100,11 @@ func TestHashed_GetEnvVarHash(t *testing.T) {
 				},
 			},
 			{
-				Name:  "MY_NEW_SECRET",
+				Name:  "NEW_SECRET",
 				Value: "SUPERSECRET_VALUE",
 			},
 			{
-				Name: "MY_SECRET",
+				Name: "MY_SECOND_SECRET",
 				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
@@ -127,7 +126,10 @@ func TestHashed_GetEnvVarHash(t *testing.T) {
 		}
 
 		// concatenation of secrets requested above
-		expected := fmt.Sprintf("%x", md5.Sum([]byte("super-valueSUPERSECRET_VALUEsecret-valueSUPERSECRET")))
+		expected := fmt.Sprintf(
+			"%x",
+			md5.Sum([]byte("MY_NEW_SECRET:super-value;NEW_SECRET:SUPERSECRET_VALUE;MY_SECOND_SECRET:secret-value;MY_SECRET:SUPERSECRET;")),
+		)
 		if hashString := fmt.Sprintf("%x", hash); hashString != expected {
 			t.Errorf("Expected hash to equal '%s', got '%s'", expected, hashString)
 		}
@@ -167,7 +169,7 @@ func TestHashed_GetEnvVarHash(t *testing.T) {
 				},
 			},
 			{
-				Name:  "MY_SECRET",
+				Name:  "MY_VALUE_SECRET",
 				Value: "SUPERSECRET",
 			},
 		}
@@ -178,7 +180,115 @@ func TestHashed_GetEnvVarHash(t *testing.T) {
 		}
 
 		// concatenation of secrets requested above
-		expected := fmt.Sprintf("%x", md5.Sum([]byte("prodSUPERSECRET_VALUEsuper-valueSUPERSECRET")))
+		expected := fmt.Sprintf("%x", md5.Sum([]byte("ENV:prod;MY_NEW_SECRET:SUPERSECRET_VALUE;MY_SECRET:super-value;MY_VALUE_SECRET:SUPERSECRET;")))
+		if hashString := fmt.Sprintf("%x", hash); hashString != expected {
+			t.Errorf("Expected hash to equal '%s', got '%s'", expected, hashString)
+		}
+	})
+}
+
+func TestHashed_EnvFromSource(t *testing.T) {
+	client := &getter{}
+	client.flush()
+
+	t.Run("with a configmap reference", func(t *testing.T) {
+		defer client.flush()
+
+		client.registerConfig("global-config", "MY_KEY", "key-value")
+		client.registerConfig("global-config", "ENV", "test")
+		client.registerConfig("global-config", "BASE_URL", "http://test.co")
+		expected := fmt.Sprintf("%x", md5.Sum([]byte("TEST_BASE_URL:http://test.co;TEST_ENV:test;TEST_MY_KEY:key-value;")))
+
+		data := []corev1.EnvFromSource{
+			{
+				Prefix: "TEST_",
+				ConfigMapRef: &corev1.ConfigMapEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "global-config",
+					},
+				},
+			},
+		}
+
+		hash, err := getEnvFromSourceHash(client, "", data)
+		if err != nil {
+			t.Fatalf("Expected no error, got %s", err)
+		}
+
+		if hashString := fmt.Sprintf("%x", hash); hashString != expected {
+			t.Errorf("Expected hash to equal '%s', got '%s'", expected, hashString)
+		}
+	})
+
+	t.Run("with a secret reference", func(t *testing.T) {
+		defer client.flush()
+
+		client.registerSecret("global-secret", "TEST_KEY", "secret-value")
+		client.registerSecret("global-secret", "API_KEY", "key-value")
+		expected := fmt.Sprintf("%x", md5.Sum([]byte("API_KEY:key-value;TEST_KEY:secret-value;")))
+
+		data := []corev1.EnvFromSource{
+			{
+				Prefix: "TEST_",
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "global-secret",
+					},
+				},
+			},
+		}
+
+		hash, err := getEnvFromSourceHash(client, "", data)
+		if err != nil {
+			t.Fatalf("Expected no error, got %s", err)
+		}
+
+		if hashString := fmt.Sprintf("%x", hash); hashString != expected {
+			t.Errorf("Expected hash to equal '%s', got '%s'", expected, hashString)
+		}
+	})
+
+	t.Run("with a mix of secrets and references", func(t *testing.T) {
+		defer client.flush()
+
+		client.registerSecret("global-secret", "TEST_KEY", "secret-value")
+		client.registerSecret("global-secret", "API_KEY", "key-value")
+		client.registerSecret("secret", "ENCRYPTION", "kms:foo/bar")
+		client.registerConfig("global-config", "MY_KEY", "key-value")
+		client.registerConfig("global-config", "ENV", "test")
+		client.registerConfig("global-config", "BASE_URL", "http://test.co")
+		expected := fmt.Sprintf("%x", md5.Sum([]byte("API_KEY:key-value;TEST_KEY:secret-value;TEST_BASE_URL:http://test.co;TEST_ENV:test;TEST_MY_KEY:key-value;ENCRYPTION:kms:foo/bar;")))
+
+		data := []corev1.EnvFromSource{
+			{
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "global-secret",
+					},
+				},
+			},
+			{
+				Prefix: "TEST_",
+				ConfigMapRef: &corev1.ConfigMapEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "global-config",
+					},
+				},
+			},
+			{
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "secret",
+					},
+				},
+			},
+		}
+
+		hash, err := getEnvFromSourceHash(client, "", data)
+		if err != nil {
+			t.Fatalf("Expected no error, got %s", err)
+		}
+
 		if hashString := fmt.Sprintf("%x", hash); hashString != expected {
 			t.Errorf("Expected hash to equal '%s', got '%s'", expected, hashString)
 		}
