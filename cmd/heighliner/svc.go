@@ -47,7 +47,7 @@ func svcCommand(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := kubekit.CreateCRD(acs, svc.AvailabilityPolicyResource); err != nil {
-		log.Printf("Could not create NetworkPolicy CRD: %s\n", err)
+		log.Printf("Could not create AvailabilityPolicy CRD: %s\n", err)
 		return err
 	}
 
@@ -67,7 +67,7 @@ func svcCommand(cmd *cobra.Command, args []string) error {
 	}
 
 	if err := kubekit.CreateCRD(acs, svc.SecurityPolicyResource); err != nil {
-		log.Printf("Could not create ConfigPolicy CRD: %s\n", err)
+		log.Printf("Could not create SecurityPolicy CRD: %s\n", err)
 		return err
 	}
 

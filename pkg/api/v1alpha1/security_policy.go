@@ -31,7 +31,7 @@ type SecurityPolicySpec struct {
 }
 
 // SecurityPolicyValidationSchema represents the OpenAPIV3Schema validation for
-// the NetworkPolicy CRD.
+// the SecurityPolicy CRD.
 var SecurityPolicyValidationSchema = &v1beta1.CustomResourceValidation{
 	OpenAPIV3Schema: &v1beta1.JSONSchemaProps{},
 }

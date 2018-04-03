@@ -117,7 +117,7 @@ var (
 		Validation: v1alpha1.ConfigPolicyValidationSchema,
 	}
 
-	// SecurityPolicyResource describes the CRD securityuration for the
+	// SecurityPolicyResource describes the CRD configuration for the
 	// SecurityPolicy CRD.
 	SecurityPolicyResource = kubekit.CustomResource{
 		Name:       "securitypolicy",
