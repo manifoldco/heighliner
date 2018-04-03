@@ -136,5 +136,5 @@ func updateObject(name string, vsvc *v1alpha1.VersionedMicroservice, p *patcher.
 		log.Printf("Synced %s %s with new data: %s", name, vsvc.Name, string(patch))
 	}
 
-	return nil
+	return err
 }

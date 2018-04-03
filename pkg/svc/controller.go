@@ -109,7 +109,7 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 		log.Printf("Synced Microservice %s with new data: %s", vsvc.Name, string(patch))
 	}
 
-	return nil
+	return err
 }
 
 func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1alpha1.VersionedMicroservice, error) {
