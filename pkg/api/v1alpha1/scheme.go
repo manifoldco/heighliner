@@ -42,6 +42,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&AvailabilityPolicyList{},
 		&VersioningPolicy{},
 		&VersioningPolicyList{},
+		&ConfigPolicy{},
+		&ConfigPolicyList{},
+		&SecurityPolicy{},
+		&SecurityPolicyList{},
 	)
 
 	v1.AddToGroupVersion(scheme, v1alpha1.SchemeGroupVersion)
