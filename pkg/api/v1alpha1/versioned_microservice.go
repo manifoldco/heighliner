@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"github.com/manifoldco/heighliner/pkg/k8sutils"
+
 	corev1 "k8s.io/api/core/v1"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +32,7 @@ type VersionedMicroserviceSpec struct {
 	Availability *AvailabilityPolicySpec `json:"availability,omitempty"`
 	Network      *NetworkPolicySpec      `json:"network,omitempty"`
 	Config       *ConfigPolicySpec       `json:"config,omitempty"`
+	Security     *SecurityPolicySpec     `json:"security,omitempty"`
 	Containers   []corev1.Container      `json:"containers"`
 }
 
@@ -40,8 +43,9 @@ var VersionedMicroserviceValidationSchema = apiextv1beta1.JSONSchemaProps{
 		"availability": AvailabilityPolicyValidationSchema,
 		"network":      NetworkPolicyValidationSchema,
 		"config":       *ConfigPolicyValidationSchema.OpenAPIV3Schema,
+		"security":     *SecurityPolicyValidationSchema.OpenAPIV3Schema,
 		"containers": {
-			MinItems: ptrInt64(1),
+			MinItems: k8sutils.PtrInt64(1),
 		},
 	},
 	Required: []string{
