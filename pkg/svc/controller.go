@@ -104,15 +104,12 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 		return err
 	}
 
-	if !patcher.IsEmptyPatch(patch) {
-		cleanedPatch, err := k8sutils.CleanupPatchAnnotations(patch, "hlnr-microservice")
-		if err != nil {
-			cleanedPatch = patch
-		}
-		log.Printf("Synced Microservice %s with new data: %s", svc.Name, string(cleanedPatch))
+	patch, err = k8sutils.CleanupPatchAnnotations(patch, "hlnr-microservice")
+	if err == nil && !patcher.IsEmptyPatch(patch) {
+		log.Printf("Synced Microservice %s with new data: %s", vsvc.Name, string(patch))
 	}
 
-	return nil
+	return err
 }
 
 func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1alpha1.VersionedMicroservice, error) {
@@ -126,10 +123,19 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		return nil, err
 	}
 
+	configPolicySpec, err := c.getConfigPolicySpec(crd)
+	if err != nil {
+		return nil, err
+	}
+
 	containers, err := c.getContainers(crd)
 	if err != nil {
 		return nil, err
 	}
+
+	annotations := crd.Annotations
+	delete(annotations, "kubekit-hlnr-microservice/last-applied-configuration")
+	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	// TODO(jelmer): currently we need to specify the TypeMeta here. We need to
 	// investigate a way to automate this depending on the passed in Object. The
@@ -142,7 +148,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 			APIVersion: "hlnr.io/v1alpha1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: crd.Annotations,
+			Annotations: annotations,
 			Labels:      crd.Labels,
 			Name:        crd.Name,
 			Namespace:   crd.Namespace,
@@ -156,6 +162,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		Spec: v1alpha1.VersionedMicroserviceSpec{
 			Availability: availabilityPolicySpec,
 			Network:      networkPolicySpec,
+			Config:       configPolicySpec,
 			Containers:   containers,
 		},
 	}, nil
@@ -234,4 +241,31 @@ func (c *Controller) getNetworkPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1
 	}
 
 	return &networkPolicy.Spec, nil
+}
+
+func (c *Controller) getConfigPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.ConfigPolicySpec, error) {
+	configPolicy := &v1alpha1.ConfigPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigPolicy",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+
+	apName := crd.Spec.ConfigPolicy.Name
+	if apName == "" {
+		return nil, nil
+	}
+
+	if err := c.patcher.Get(configPolicy, crd.Namespace, apName); err != nil {
+		return nil, err
+	}
+
+	// TODO(jelmer): currently we're setting the last-updated annotation here.
+	// This makes sure that the Deployment gets re-deployed when there is an
+	// update to the configPolicy.
+	// In the future, we'll roll out new versions on changes and we can drop
+	// this annotation.
+	crd.Annotations["hlnr-config-policy/last-updated"] = configPolicy.Status.LastUpdated.String()
+
+	return &configPolicy.Spec, nil
 }

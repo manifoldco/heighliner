@@ -26,6 +26,8 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) 
 		affinity = DefaultAffinity("hlnr.io/service", crd.Name)
 	}
 
+	populateContainers(crd)
+
 	dpl := &v1beta1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -63,11 +65,34 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) 
 					Affinity:                     affinity,
 					RestartPolicy:                availability.RestartPolicy,
 					Containers:                   crd.Spec.Containers,
-					Volumes:                      crd.Spec.Volumes,
+					Volumes:                      podVolumes(crd),
 				},
 			},
 		},
 	}
 
 	return dpl, nil
+}
+
+func populateContainers(crd *v1alpha1.VersionedMicroservice) {
+	if crd.Spec.Config == nil {
+		return
+	}
+
+	for i, container := range crd.Spec.Containers {
+		container.VolumeMounts = crd.Spec.Config.VolumeMounts
+		container.EnvFrom = crd.Spec.Config.EnvFrom
+		container.Env = crd.Spec.Config.Env
+
+		// reassign the container in the CRD
+		crd.Spec.Containers[i] = container
+	}
+}
+
+func podVolumes(crd *v1alpha1.VersionedMicroservice) []corev1.Volume {
+	if crd.Spec.Config == nil {
+		return nil
+	}
+
+	return crd.Spec.Config.Volumes
 }
