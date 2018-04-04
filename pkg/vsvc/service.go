@@ -67,8 +67,7 @@ func getService(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 			Selector: map[string]string{
 				k8sutils.LabelServiceKey: crd.Name,
 			},
-			// TODO(jelmer): make this configurable
-			SessionAffinity: corev1.ServiceAffinityNone,
+			SessionAffinity: network.SessionAffinity,
 		},
 	}
 
@@ -79,8 +78,6 @@ func getServicePorts(networkPorts []v1alpha1.NetworkPort) ([]corev1.ServicePort,
 	ports := make([]corev1.ServicePort, len(networkPorts))
 
 	for i, port := range networkPorts {
-		// TODO(jelmer): add validation, should potentially be done through
-		// an actual CRD validator.
 		ports[i] = corev1.ServicePort{
 			Protocol:   corev1.ProtocolTCP,
 			Name:       port.Name,
