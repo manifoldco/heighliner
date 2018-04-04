@@ -80,10 +80,6 @@ func getIngressRules(serviceName string, records []v1alpha1.NetworkDNS) []v1beta
 				HTTP: &v1beta1.HTTPIngressRuleValue{
 					Paths: []v1beta1.HTTPIngressPath{
 						{
-							// TODO(jelmer): do we want to make this
-							// configurable?
-							// This might be where we start putting our
-							// "highly opinionated" goals forward.
 							Path: "/",
 							Backend: v1beta1.IngressBackend{
 								ServiceName: serviceName,

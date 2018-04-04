@@ -115,8 +115,6 @@ func (c *Controller) applyCRD(obj interface{}, opts ...patcher.OptionFunc) error
 
 type objectFunc func(*v1alpha1.VersionedMicroservice) (runtime.Object, error)
 
-// TODO: these errors should be logged with glog and at a higher level so we can
-// cut down noise.
 func updateObject(name string, vsvc *v1alpha1.VersionedMicroservice, p *patcher.Patcher, f objectFunc, opts ...patcher.OptionFunc) error {
 	obj, err := f(vsvc)
 	if err != nil {
