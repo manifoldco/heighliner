@@ -7,7 +7,9 @@ import (
 	"sort"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 type objectGetter interface {
@@ -120,14 +122,24 @@ func valueFromEnvVar(p objectGetter, ns string, env corev1.EnvVar) ([]byte, erro
 			},
 		}
 
-		// TODO(jelmer): handle the case where the secret doesn't exist and it's
-		// defined as optional.
 		if err := p.Get(config, ns, ckr.Name); err != nil {
+			if errors.IsNotFound(err) && ckr.Optional != nil && *ckr.Optional == true {
+				return nil, nil
+			}
+
 			return nil, err
 		}
 
+		rawData, ok := config.Data[ckr.Key]
+		if !ok && isRequired(ckr.Optional) {
+			return nil, errors.NewNotFound(
+				schema.GroupResource{Group: "v1", Resource: "ConfigMap"},
+				fmt.Sprintf("%s: %s", ckr.Name, ckr.Key),
+			)
+		}
+
 		// TODO(jelmer): in 1.10 there's `BinaryData`
-		data = []byte(config.Data[ckr.Key])
+		data = []byte(rawData)
 	case vf.SecretKeyRef != nil:
 		skr := vf.SecretKeyRef
 		secret := &corev1.Secret{
@@ -137,14 +149,28 @@ func valueFromEnvVar(p objectGetter, ns string, env corev1.EnvVar) ([]byte, erro
 			},
 		}
 
-		// TODO(jelmer): handle the case where the secret doesn't exist and it's
-		// defined as optional.
 		if err := p.Get(secret, ns, skr.Name); err != nil {
+			if errors.IsNotFound(err) && skr.Optional != nil && *skr.Optional == true {
+				return nil, nil
+			}
+
 			return nil, err
 		}
 
-		data = secret.Data[skr.Key]
+		rawData, ok := secret.Data[skr.Key]
+		if !ok && isRequired(skr.Optional) {
+			return nil, errors.NewNotFound(
+				schema.GroupResource{Group: "v1", Resource: "Secret"},
+				fmt.Sprintf("%s: %s", skr.Name, skr.Key),
+			)
+		}
+
+		data = rawData
 	}
 
 	return data, nil
+}
+
+func isRequired(optional *bool) bool {
+	return optional == nil || (optional != nil && *optional == false)
 }

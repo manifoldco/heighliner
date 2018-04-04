@@ -2,11 +2,13 @@ package configpolicy
 
 import (
 	"crypto/md5"
-	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/manifoldco/heighliner/pkg/k8sutils"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestHashed_GetEnvVarHash(t *testing.T) {
@@ -185,6 +187,250 @@ func TestHashed_GetEnvVarHash(t *testing.T) {
 			t.Errorf("Expected hash to equal '%s', got '%s'", expected, hashString)
 		}
 	})
+
+	t.Run("with non existing secrets and configs", func(t *testing.T) {
+		t.Run("without optional params", func(t *testing.T) {
+			t.Run("config", func(t *testing.T) {
+				defer client.flush()
+
+				data := []corev1.EnvVar{
+					{
+						Name: "ENV",
+						ValueFrom: &corev1.EnvVarSource{
+							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "global-config",
+								},
+								Key: "ENV",
+							},
+						},
+					},
+				}
+				_, err := getEnvVarHash(client, "", data)
+				if !errors.IsNotFound(err) {
+					t.Fatalf("Expected not found error, got %s", err)
+				}
+			})
+
+			t.Run("secret", func(t *testing.T) {
+				defer client.flush()
+
+				data := []corev1.EnvVar{
+					{
+						Name: "API_KEY",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "test-secrets",
+								},
+								Key: "API_KEY",
+							},
+						},
+					},
+				}
+
+				_, err := getEnvVarHash(client, "", data)
+				if !errors.IsNotFound(err) {
+					t.Fatalf("Expected not found error, got %s", err)
+				}
+			})
+
+			t.Run("no optional secret", func(t *testing.T) {
+				defer client.flush()
+
+				data := []corev1.EnvVar{
+					{
+						Name: "API_KEY",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								Optional: k8sutils.PtrBool(false),
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "test-secrets",
+								},
+								Key: "API_KEY",
+							},
+						},
+					},
+				}
+
+				_, err := getEnvVarHash(client, "", data)
+				if !errors.IsNotFound(err) {
+					t.Fatalf("Expected not found error, got %s", err)
+				}
+			})
+
+			t.Run("no optional config", func(t *testing.T) {
+				defer client.flush()
+
+				data := []corev1.EnvVar{
+					{
+						Name: "ENV",
+						ValueFrom: &corev1.EnvVarSource{
+							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+								Optional: k8sutils.PtrBool(false),
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "global-config",
+								},
+								Key: "ENV",
+							},
+						},
+					},
+				}
+				_, err := getEnvVarHash(client, "", data)
+				if !errors.IsNotFound(err) {
+					t.Fatalf("Expected not found error, got %s", err)
+				}
+			})
+
+		})
+
+		t.Run("with optional params", func(t *testing.T) {
+			fmt.Println(client.secretsData)
+			t.Run("config", func(t *testing.T) {
+				defer client.flush()
+
+				data := []corev1.EnvVar{
+					{
+						Name: "ENV",
+						ValueFrom: &corev1.EnvVarSource{
+							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+								Optional: k8sutils.PtrBool(true),
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "global-config",
+								},
+								Key: "ENV",
+							},
+						},
+					},
+				}
+
+				_, err := getEnvVarHash(client, "", data)
+				if err != nil {
+					t.Fatalf("Expected no error, got %s", err)
+				}
+			})
+
+			t.Run("secret", func(t *testing.T) {
+				defer client.flush()
+
+				data := []corev1.EnvVar{
+					{
+						Name: "API_KEY",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								Optional: k8sutils.PtrBool(true),
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "test-secrets",
+								},
+								Key: "API_KEY",
+							},
+						},
+					},
+				}
+
+				_, err := getEnvVarHash(client, "", data)
+				if err != nil {
+					t.Fatalf("Expected no error, got %s", err)
+				}
+			})
+		})
+	})
+
+	t.Run("with non existing keys", func(t *testing.T) {
+		client.registerConfig("global-config", "URL", "my-url")
+		client.registerSecret("test-secrets", "TOKEN", "secret-token")
+		defer client.flush()
+
+		t.Run("without optional params", func(t *testing.T) {
+			t.Run("config", func(t *testing.T) {
+				data := []corev1.EnvVar{
+					{
+						Name: "ENV",
+						ValueFrom: &corev1.EnvVarSource{
+							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "global-config",
+								},
+								Key: "ENV",
+							},
+						},
+					},
+				}
+
+				_, err := getEnvVarHash(client, "", data)
+				if !errors.IsNotFound(err) {
+					t.Fatalf("Expected not found error, got %s", err)
+				}
+			})
+
+			t.Run("secret", func(t *testing.T) {
+				data := []corev1.EnvVar{
+					{
+						Name: "API_KEY",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "test-secrets",
+								},
+								Key: "API_KEY",
+							},
+						},
+					},
+				}
+
+				_, err := getEnvVarHash(client, "", data)
+				if !errors.IsNotFound(err) {
+					t.Fatalf("Expected not found error, got %s", err)
+				}
+			})
+		})
+
+		t.Run("with optional params", func(t *testing.T) {
+			t.Run("config", func(t *testing.T) {
+				data := []corev1.EnvVar{
+					{
+						Name: "ENV",
+						ValueFrom: &corev1.EnvVarSource{
+							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+								Optional: k8sutils.PtrBool(true),
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "global-config",
+								},
+								Key: "ENV",
+							},
+						},
+					},
+				}
+
+				_, err := getEnvVarHash(client, "", data)
+				if err != nil {
+					t.Fatalf("Expected no error, got %s", err)
+				}
+			})
+
+			t.Run("secret", func(t *testing.T) {
+				data := []corev1.EnvVar{
+					{
+						Name: "API_KEY",
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								Optional: k8sutils.PtrBool(true),
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: "test-secrets",
+								},
+								Key: "API_KEY",
+							},
+						},
+					},
+				}
+
+				_, err := getEnvVarHash(client, "", data)
+				if err != nil {
+					t.Fatalf("Expected no error, got %s", err)
+				}
+			})
+		})
+	})
 }
 
 func TestHashed_EnvFromSource(t *testing.T) {
@@ -307,13 +553,13 @@ func (g *getter) Get(obj interface{}, ns, name string) error {
 		return g.getConfigMap(config, ns, name)
 	}
 
-	return errors.New("Type not supported")
+	return errors.NewServiceUnavailable("Type not supported")
 }
 
 func (g *getter) getSecret(secret *corev1.Secret, ns, name string) error {
 	data, ok := g.secretsData[name]
 	if !ok {
-		return errors.New("Not found")
+		return errors.NewNotFound(schema.GroupResource{Group: "v1", Resource: "Secret"}, name)
 	}
 
 	binaryData := map[string][]byte{}
@@ -329,7 +575,7 @@ func (g *getter) getSecret(secret *corev1.Secret, ns, name string) error {
 func (g *getter) getConfigMap(config *corev1.ConfigMap, ns, name string) error {
 	data, ok := g.configData[name]
 	if !ok {
-		return errors.New("Not found")
+		return errors.NewNotFound(schema.GroupResource{Group: "v1", Resource: "ConfigMap"}, name)
 	}
 
 	config.Data = data
