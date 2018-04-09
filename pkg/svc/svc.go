@@ -24,7 +24,7 @@ var (
 		Group:   v1alpha1.GroupName,
 		Version: v1alpha1.Version,
 		Scope:   v1beta1.NamespaceScoped,
-		Aliases: []string{"svc"},
+		Aliases: []string{"msvc"},
 		Object:  &v1alpha1.Microservice{},
 		Validation: &v1beta1.CustomResourceValidation{
 			OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
