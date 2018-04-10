@@ -1,7 +1,7 @@
 package v1alpha1
 
 import (
-	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	core "k8s.io/kubernetes/pkg/apis/core"
 )
@@ -13,7 +13,8 @@ type Microservice struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec MicroserviceSpec `json:"spec"`
+	Spec   MicroserviceSpec   `json:"spec"`
+	Status MicroserviceStatus `json:"status"`
 }
 
 // MicroserviceList is a list of Microservices.
@@ -34,17 +35,30 @@ type MicroserviceSpec struct {
 	SecurityPolicy     core.LocalObjectReference `json:"securityPolicy,omitempty"`
 }
 
+// MicroserviceStatus represents the status a specific Microservice is in.
+type MicroserviceStatus struct {
+	Releases []Release `json:"releases"`
+}
+
 // MicroserviceValidationSchema represents the OpenAPIV3Scheme which
 // defines the validation for the MicroserviceSpec.
-var MicroserviceValidationSchema = apiextv1beta1.JSONSchemaProps{
-	Required: []string{"imagePolicy"},
-	Properties: map[string]apiextv1beta1.JSONSchemaProps{
-		"imagePolicy":        requiredObjectReference,
-		"availabilityPolicy": requiredObjectReference,
-		"networkPolicy":      requiredObjectReference,
+var MicroserviceValidationSchema = &v1beta1.CustomResourceValidation{
+	OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
+		Properties: map[string]v1beta1.JSONSchemaProps{
+			"spec": {
+				Required: []string{"imagePolicy"},
+				Properties: map[string]v1beta1.JSONSchemaProps{
+					"imagePolicy":        requiredObjectReference,
+					"availabilityPolicy": requiredObjectReference,
+					"networkPolicy":      requiredObjectReference,
+				},
+			},
+			"status": ReleaseValidationSchema,
+		},
+		Required: []string{"spec"},
 	},
 }
 
-var requiredObjectReference = apiextv1beta1.JSONSchemaProps{
+var requiredObjectReference = v1beta1.JSONSchemaProps{
 	Required: []string{"name"},
 }

@@ -376,7 +376,7 @@
     "kubetest",
     "patcher"
   ]
-  revision = "0884ef7dad6fb6bee45eec0ea2be985b4c1e595a"
+  revision = "4a6ad381fbb7a81e76666801e6272d09e31103a7"
 
 [[projects]]
   name = "github.com/jessevdk/go-flags"
@@ -1143,6 +1143,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "502d1c1365b18e7a61f4062ea8d584b62061cc2741ab4029890746d8b4ba9437"
+  inputs-digest = "b2c93836c76d554a37693ee83c76966f4ffb33cdb966b5821ecb01ad33874db0"
   solver-name = "gps-cdcl"
   solver-version = 1

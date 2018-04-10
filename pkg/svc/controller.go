@@ -3,9 +3,11 @@ package svc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
@@ -15,6 +17,7 @@ import (
 	"github.com/jelmersnoeck/kubekit/patcher"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -92,27 +95,63 @@ func (c *Controller) run(ctx context.Context) {
 func (c *Controller) patchMicroservice(obj interface{}) error {
 	svc := obj.(*v1alpha1.Microservice).DeepCopy()
 
-	vsvc, err := c.getVersionedMicroservice(svc)
+	imagePolicy, err := c.getImagePolicy(svc)
 	if err != nil {
-		log.Printf("Error generating the VersionedMicroservice object error=%s", err)
+		log.Printf("Could not get ImagePolicy for Microservice %s: %s", svc.Name, err)
 		return err
 	}
 
-	patch, err := c.patcher.Apply(vsvc)
-	if err != nil {
-		log.Printf("Error applying VersionedMicroservice error=%s", err)
+	var deployedReleases []v1alpha1.Release
+	for _, release := range imagePolicy.Status.Releases {
+		vsvc, err := c.getVersionedMicroservice(svc, &release)
+		if err != nil {
+			log.Printf("Error generating the VersionedMicroservice object error=%s", err)
+			// we don't need to return the error here, we want to be able to
+			// deploy other releases still
+			continue
+		}
+
+		patch, err := c.patcher.Apply(vsvc)
+		if err != nil {
+			log.Printf("Error applying VersionedMicroservice error=%s", err)
+			// we don't need to return the error here, we want to be able to
+			// deploy other releases still
+			continue
+		}
+
+		patch, err = k8sutils.CleanupPatchAnnotations(patch, "hlnr-microservice")
+		// doesn't matter if this errors, we just won't log the change if it
+		// does
+		if err == nil && !patcher.IsEmptyPatch(patch) {
+			log.Printf("Synced Microservice %s %s with version %s", vsvc.Name, release.Name, release.Version)
+		}
+
+		deployedReleases = append(deployedReleases, release)
+	}
+
+	if err := deprecateReleases(c.patcher, svc, imagePolicy.Status.Releases); err != nil {
+		log.Printf("Error deprecating releases for %s: %s", svc.Name, err)
 		return err
 	}
 
-	patch, err = k8sutils.CleanupPatchAnnotations(patch, "hlnr-microservice")
-	if err == nil && !patcher.IsEmptyPatch(patch) {
-		log.Printf("Synced Microservice %s with new data: %s", vsvc.Name, string(patch))
+	// new release objects, store them
+	if len(releaseDiff(svc.Status.Releases, deployedReleases)) > 0 {
+		svc.Status.Releases = deployedReleases
+		// need to specify types again until we resolve the mapping issue
+		svc.TypeMeta = metav1.TypeMeta{
+			Kind:       "Microservice",
+			APIVersion: "hlnr.io/v1alpha1",
+		}
+		if _, err := c.patcher.Apply(svc); err != nil {
+			log.Printf("Error syncing Microservice %s: %s", svc.Name, err)
+			return err
+		}
 	}
 
-	return err
+	return nil
 }
 
-func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1alpha1.VersionedMicroservice, error) {
+func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, release *v1alpha1.Release) (*v1alpha1.VersionedMicroservice, error) {
 	availabilityPolicySpec, err := c.getAvailabilityPolicySpec(crd)
 	if err != nil {
 		return nil, err
@@ -133,7 +172,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		return nil, err
 	}
 
-	containers, err := c.getContainers(crd)
+	containers, err := c.getContainers(crd, release)
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +180,13 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 	annotations := crd.Annotations
 	delete(annotations, "kubekit-hlnr-microservice/last-applied-configuration")
 	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
+
+	name := fullReleaseName(crd.Name, release)
+	labels := k8sutils.Labels(crd.Labels, crd.ObjectMeta)
+	labels["hlnr.io/microservice.full_name"] = name
+	labels["hlnr.io/microservice.name"] = crd.Name
+	labels["hlnr.io/microservice.release"] = release.Name
+	labels["hlnr.io/microservice.version"] = release.Version
 
 	// TODO(jelmer): currently we need to specify the TypeMeta here. We need to
 	// investigate a way to automate this depending on the passed in Object. The
@@ -154,8 +200,8 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Annotations: annotations,
-			Labels:      crd.Labels,
-			Name:        crd.Name,
+			Labels:      labels,
+			Name:        name,
 			Namespace:   crd.Namespace,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(
@@ -174,16 +220,11 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice) (*v1al
 	}, nil
 }
 
-func (c *Controller) getContainers(crd *v1alpha1.Microservice) ([]corev1.Container, error) {
-	imagePolicy, err := c.getImagePolicy(crd)
-	if err != nil {
-		return nil, err
-	}
-
+func (c *Controller) getContainers(crd *v1alpha1.Microservice, release *v1alpha1.Release) ([]corev1.Container, error) {
 	return []corev1.Container{
 		{
 			Name:            crd.Name,
-			Image:           imagePolicy.Status.Image,
+			Image:           release.Image,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 		},
 	}, nil
@@ -202,8 +243,8 @@ func (c *Controller) getImagePolicy(crd *v1alpha1.Microservice) (*v1alpha1.Image
 		return nil, err
 	}
 
-	if imagePolicy.Status.Image == "" {
-		return nil, errors.New("Need an image to be set in the ImagePolicy Status")
+	if len(imagePolicy.Status.Releases) == 0 {
+		return nil, errors.New("Need a release to be set in the ImagePolicy Status")
 	}
 
 	return imagePolicy, nil
@@ -294,4 +335,69 @@ func (c *Controller) getSecurityPolicySpec(crd *v1alpha1.Microservice) (*v1alpha
 	}
 
 	return &securityPolicy.Spec, nil
+}
+
+type deleteClient interface {
+	Delete(runtime.Object, ...patcher.OptionFunc) error
+}
+
+func deprecateReleases(cl deleteClient, crd *v1alpha1.Microservice, desired []v1alpha1.Release) error {
+	deprecated := deprecatedReleases(desired, crd.Status.Releases)
+
+	for _, release := range deprecated {
+		name := fullReleaseName(crd.Name, &release)
+		svc := &v1alpha1.VersionedMicroservice{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "VersionedMicroservice",
+				APIVersion: "hlnr.io/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+		}
+
+		if err := cl.Delete(svc); err != nil {
+			log.Printf("Could not delete VersionedMicroservice %s: %s", name, err)
+		}
+	}
+
+	return nil
+}
+
+func releaseDiff(desired, current []v1alpha1.Release) []v1alpha1.Release {
+	// this could be done quicker/better but it's nice to reuse the same
+	// function instead of implementing another algorithm.
+	return append(deprecatedReleases(desired, current), deprecatedReleases(current, desired)...)
+}
+
+func deprecatedReleases(desired, current []v1alpha1.Release) []v1alpha1.Release {
+	var deprecated []v1alpha1.Release
+
+	desiredReleases := make([]string, len(desired))
+	for i, release := range desired {
+		desiredReleases[i] = release.String()
+	}
+
+CurrentReleaseLoop:
+	for _, cRelease := range current {
+		name := cRelease.String()
+		for _, dRelease := range desiredReleases {
+			if name == dRelease {
+				continue CurrentReleaseLoop
+			}
+		}
+
+		deprecated = append(deprecated, cRelease)
+	}
+
+	return deprecated
+}
+
+func fullReleaseName(crdName string, release *v1alpha1.Release) string {
+	releaseName := ""
+	if release.Name != crdName {
+		releaseName = fmt.Sprintf("-%s", release.Name)
+	}
+
+	return strings.ToLower(fmt.Sprintf("%s%s-%s", crdName, releaseName, release.Version))
 }
