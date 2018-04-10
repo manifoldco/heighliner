@@ -19,20 +19,14 @@ const (
 var (
 	// CustomResource describes the CRD configuration for the Microservice CRD.
 	CustomResource = kubekit.CustomResource{
-		Name:    CustomResourceName,
-		Plural:  CustomResourceNamePlural,
-		Group:   v1alpha1.GroupName,
-		Version: v1alpha1.Version,
-		Scope:   v1beta1.NamespaceScoped,
-		Aliases: []string{"svc"},
-		Object:  &v1alpha1.Microservice{},
-		Validation: &v1beta1.CustomResourceValidation{
-			OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
-				Properties: map[string]v1beta1.JSONSchemaProps{
-					"spec": v1alpha1.MicroserviceValidationSchema,
-				},
-			},
-		},
+		Name:       CustomResourceName,
+		Plural:     CustomResourceNamePlural,
+		Group:      v1alpha1.GroupName,
+		Version:    v1alpha1.Version,
+		Scope:      v1beta1.NamespaceScoped,
+		Aliases:    []string{"msvc"},
+		Object:     &v1alpha1.Microservice{},
+		Validation: v1alpha1.MicroserviceValidationSchema,
 	}
 
 	// NetworkPolicyResource describes the CRD configuration for the

@@ -14,7 +14,7 @@ import (
 
 var (
 	svcCmd = &cobra.Command{
-		Use:   "svc",
+		Use:   "msvc",
 		Short: "Run the Microservice Controller",
 		RunE:  svcCommand,
 	}

@@ -33,8 +33,8 @@ type (
 	// SemVerLevel indicates a level which we want to monitor the image registry
 	// for. It should be in the format of format.
 	// Examples:
-	// v1.2.3, v1.2.4-rc.0, v1.2.4-pr.1
-	// 1.2.3, 1.2.4-rc.0, 1.2.4-pr.1
+	// v1.2.3, v1.2.4-rc.0, v1.2.4-pr.1+201804011533
+	// 1.2.3, 1.2.4-rc.0, 1.2.4-pr.1+201804011533
 	SemVerLevel string
 
 	// SemVerVersion represents the type of version we want to monitor for.
@@ -48,7 +48,7 @@ var (
 
 	// SemVerLevelReleaseCandidate is used for a release-candidate that is ready
 	// for QA.
-	SemVerLevelReleaseCandidate SemVerLevel = "rc"
+	SemVerLevelReleaseCandidate SemVerLevel = "candidate"
 
 	// SemVerLevelPreview is used for a preview release. This is generally
 	// associated with development deploys.

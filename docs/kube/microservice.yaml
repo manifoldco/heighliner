@@ -64,7 +64,7 @@ spec:
           image: manifoldco/heighliner:latest
           imagePullPolicy: Never
           args:
-          - svc
+          - msvc
           resources:
             requests:
               cpu: 100m

@@ -36,7 +36,7 @@ type ImagePolicySpec struct {
 // The Status will be used by the Microservice component to build the actual
 // Deployment.
 type ImagePolicyStatus struct {
-	Image string `json:"image"`
+	Releases []Release `json:"releases"`
 }
 
 // ImagePolicyValidationSchema represents the OpenAPIV3Schema validation for
@@ -47,9 +47,7 @@ var ImagePolicyValidationSchema = &v1beta1.CustomResourceValidation{
 			"spec": {
 				Required: []string{"image", "versioningPolicy"},
 			},
-			"status": {
-				Required: []string{"image"},
-			},
+			"status": ReleaseValidationSchema,
 		},
 		Required: []string{"spec"},
 	},
