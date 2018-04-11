@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kube-openapi/pkg/util/proto"
@@ -25,9 +26,10 @@ type NetworkPolicyList struct {
 
 // NetworkPolicySpec describes the specification for Network.
 type NetworkPolicySpec struct {
-	IngressClass string        `json:"ingressClass"`
-	Ports        []NetworkPort `json:"ports"`
-	DNS          []NetworkDNS  `json:"dns"`
+	IngressClass    string                 `json:"ingressClass"`
+	SessionAffinity corev1.ServiceAffinity `json:"sessionAffinity"`
+	Ports           []NetworkPort          `json:"ports"`
+	DNS             []NetworkDNS           `json:"dns"`
 }
 
 // NetworkPort describes a port that is exposed for a given service.

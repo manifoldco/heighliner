@@ -41,7 +41,6 @@ func vsvcCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// TODO(jelmer): maybe make a "ControllerContext" or something of the likes?
 	ctrl, err := vsvc.NewController(cfg, cs, vsvcFlags.Namespace)
 	if err != nil {
 		log.Printf("Could not create controller: %s\n", err)
