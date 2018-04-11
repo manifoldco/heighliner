@@ -2,7 +2,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/kube-openapi/pkg/util/proto"
 )
@@ -75,34 +75,41 @@ type NetworkDNS struct {
 
 // NetworkPolicyValidationSchema represents the OpenAPIV3Schema validation for
 // the NetworkPolicy CRD.
-var NetworkPolicyValidationSchema = apiextv1beta1.JSONSchemaProps{
-	Properties: map[string]apiextv1beta1.JSONSchemaProps{
-		"ingressClass": {
-			Type: proto.String,
-		},
-		"ports": {
-			Items: &apiextv1beta1.JSONSchemaPropsOrArray{
-				Schema: &apiextv1beta1.JSONSchemaProps{
-					Required: []string{"name", "targetPort", "port"},
-				},
-			},
-		},
-		"dns": {
-			Items: &apiextv1beta1.JSONSchemaPropsOrArray{
-				Schema: &apiextv1beta1.JSONSchemaProps{
-					Required: []string{"domain"},
-					Properties: map[string]apiextv1beta1.JSONSchemaProps{
-						"ttl": {
-							Type: proto.Integer,
+var NetworkPolicyValidationSchema = &v1beta1.CustomResourceValidation{
+	OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
+		Required: []string{"spec"},
+		Properties: map[string]v1beta1.JSONSchemaProps{
+			"spec": {
+				Properties: map[string]v1beta1.JSONSchemaProps{
+					"ingressClass": {
+						Type: proto.String,
+					},
+					"ports": {
+						Items: &v1beta1.JSONSchemaPropsOrArray{
+							Schema: &v1beta1.JSONSchemaProps{
+								Required: []string{"name", "targetPort", "port"},
+							},
 						},
-						"disableTLS": {
-							Type: proto.Boolean,
-						},
-						"tlsGroup": {
-							Type: proto.String,
-						},
-						"port": {
-							Type: proto.String,
+					},
+					"dns": {
+						Items: &v1beta1.JSONSchemaPropsOrArray{
+							Schema: &v1beta1.JSONSchemaProps{
+								Required: []string{"domain"},
+								Properties: map[string]v1beta1.JSONSchemaProps{
+									"ttl": {
+										Type: proto.Integer,
+									},
+									"disableTLS": {
+										Type: proto.Boolean,
+									},
+									"tlsGroup": {
+										Type: proto.String,
+									},
+									"port": {
+										Type: proto.String,
+									},
+								},
+							},
 						},
 					},
 				},

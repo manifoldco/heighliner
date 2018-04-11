@@ -1,16 +1,16 @@
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: heighliner:versionedmicroservice
+  name: heighliner:network-policy
 rules:
   - apiGroups: ["hlnr.io"]
-    resources: ["versionedmicroservices"]
+    resources: ["networkpolicies"]
     verbs: ["*"]
-  - apiGroups: ["extensions"]
-    resources: ["deployments"]
-    verbs: ["*"]
-  - apiGroups: ["policies"]
-    resources: ["poddisruptionbudgets"]
+  - apiGroups: ["hlnr.io"]
+    resources: ["microservices"]
+    verbs: ["get", "list"]
+  - apiGroups: ["v1"]
+    resources: ["services", "ingress"]
     verbs: ["*"]
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
@@ -21,13 +21,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: heighliner:versionedmicroservice
+  name: heighliner:network-policy
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: heighliner:versionedmicroservice
+  name: heighliner:network-policy
 subjects:
-  - name: heighliner-versionedmicroservice
+  - name: heighliner-network-policy
     namespace: hlnr-system
     kind: ServiceAccount
 
@@ -36,7 +36,7 @@ subjects:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: heighliner-versionedmicroservice
+  name: heighliner-network-policy
   namespace: hlnr-system
 
 ---
@@ -44,22 +44,22 @@ metadata:
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: versioned-microservice-controller
+  name: network-policy-controller
   namespace: hlnr-system
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: versioned-microservice-controller
+        app: network-policy-controller
     spec:
-      serviceAccountName: heighliner-versionedmicroservice
+      serviceAccountName: heighliner-network-policy
       containers:
-        - name: versioned-microservice-controller
+        - name: network-policy-controller
           image: manifoldco/heighliner:latest
           imagePullPolicy: IfNotPresent
           args:
-          - vsvc
+          - npw
           resources:
             requests:
               cpu: 100m

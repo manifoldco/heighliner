@@ -41,7 +41,7 @@ type VersionedMicroserviceSpec struct {
 var VersionedMicroserviceValidationSchema = apiextv1beta1.JSONSchemaProps{
 	Properties: map[string]apiextv1beta1.JSONSchemaProps{
 		"availability": AvailabilityPolicyValidationSchema,
-		"network":      NetworkPolicyValidationSchema,
+		"network":      *NetworkPolicyValidationSchema.OpenAPIV3Schema,
 		"config":       *ConfigPolicyValidationSchema.OpenAPIV3Schema,
 		"security":     *SecurityPolicyValidationSchema.OpenAPIV3Schema,
 		"containers": {

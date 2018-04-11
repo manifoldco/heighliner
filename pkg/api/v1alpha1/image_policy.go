@@ -43,12 +43,12 @@ type ImagePolicyStatus struct {
 // the NetworkPolicy CRD.
 var ImagePolicyValidationSchema = &v1beta1.CustomResourceValidation{
 	OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
+		Required: []string{"spec"},
 		Properties: map[string]v1beta1.JSONSchemaProps{
 			"spec": {
 				Required: []string{"image", "versioningPolicy"},
 			},
 			"status": ReleaseValidationSchema,
 		},
-		Required: []string{"spec"},
 	},
 }

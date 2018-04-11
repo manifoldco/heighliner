@@ -12,7 +12,6 @@ rules:
   - apiGroups: ["hlnr.io"]
     resources:
     - "imagepolicies"
-    - "networkpolicies"
     - "availabilitypolicies"
     - "configpolicies"
     - "securitypolicies"
