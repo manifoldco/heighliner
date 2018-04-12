@@ -3,9 +3,6 @@ kind: VersionedMicroservice
 metadata:
   name: hello-world-minimum
 spec:
-  network:
-    dns:
-    - domain: hello-world.demo.cool
   containers:
   - name: hello-world
     image: hlnr/hello-world:latest

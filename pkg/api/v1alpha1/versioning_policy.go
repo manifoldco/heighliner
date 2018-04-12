@@ -69,10 +69,16 @@ var (
 // SemVerSource is a versioning policy based on semver.
 // When semver is selected, Heighliner can watch for images on 3 different
 // levels.
-// When `release` level is selected, we will only get
 type SemVerSource struct {
+	// Version is the type of Version we want to start tracking with this
+	// Policy.
 	Version SemVerVersion `json:"version"`
-	Level   SemVerLevel   `json:"level"`
+
+	// Level is the level we want to fetch images for this Microservice for.
+	Level SemVerLevel `json:"level"`
+
+	// MinVersion is the minimum version that we want to track for this Policy.
+	MinVersion string `json:"minVersion"`
 }
 
 // VersioningPolicyValidationSchema represents the OpenAPIV3Schema validation for

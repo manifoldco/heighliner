@@ -2,6 +2,7 @@ package networkpolicy
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -69,8 +71,13 @@ func (c *Controller) run(ctx context.Context) {
 		c.namespace,
 		&NetworkPolicyResource,
 		cache.ResourceEventHandlerFuncs{
-			AddFunc:    func(obj interface{}) {},
-			UpdateFunc: func(old, new interface{}) {},
+			AddFunc: func(obj interface{}) {
+				c.syncNetworking(obj)
+			},
+			UpdateFunc: func(old, new interface{}) {
+				c.syncNetworking(new)
+				// TODO(jelmer): delete old networking objects
+			},
 			DeleteFunc: func(obj interface{}) {
 				cp := obj.(*v1alpha1.NetworkPolicy).DeepCopy()
 				log.Printf("Deleting NetworkPolicy %s", cp.Name)
@@ -79,4 +86,44 @@ func (c *Controller) run(ctx context.Context) {
 	)
 
 	go watcher.Run(ctx.Done())
+}
+
+func (c *Controller) syncNetworking(obj interface{}) error {
+	np := obj.(*v1alpha1.NetworkPolicy)
+
+	ms, err := getMicroservice(c.patcher, np)
+	if err != nil {
+		log.Printf("Could not retrieve Microservice for %s: %s", np.Name, err)
+		return err
+	}
+
+	for _, release := range ms.Status.Releases {
+		fmt.Println(release)
+	}
+
+	return nil
+}
+
+type getClient interface {
+	Get(interface{}, string, string) error
+}
+
+func getMicroservice(cl getClient, np *v1alpha1.NetworkPolicy) (*v1alpha1.Microservice, error) {
+	ms := &v1alpha1.Microservice{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Microservice",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+
+	name := np.Name
+	if np.Spec.Microservice != "" {
+		name = np.Spec.Microservice
+	}
+
+	if err := cl.Get(ms, np.Namespace, name); err != nil {
+		return nil, err
+	}
+
+	return ms, nil
 }

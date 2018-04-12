@@ -123,7 +123,7 @@ func valueFromEnvVar(p objectGetter, ns string, env corev1.EnvVar) ([]byte, erro
 		}
 
 		if err := p.Get(config, ns, ckr.Name); err != nil {
-			if errors.IsNotFound(err) && ckr.Optional != nil && *ckr.Optional == true {
+			if errors.IsNotFound(err) && ckr.Optional != nil && *ckr.Optional {
 				return nil, nil
 			}
 
@@ -150,7 +150,7 @@ func valueFromEnvVar(p objectGetter, ns string, env corev1.EnvVar) ([]byte, erro
 		}
 
 		if err := p.Get(secret, ns, skr.Name); err != nil {
-			if errors.IsNotFound(err) && skr.Optional != nil && *skr.Optional == true {
+			if errors.IsNotFound(err) && skr.Optional != nil && *skr.Optional {
 				return nil, nil
 			}
 
@@ -172,5 +172,5 @@ func valueFromEnvVar(p objectGetter, ns string, env corev1.EnvVar) ([]byte, erro
 }
 
 func isRequired(optional *bool) bool {
-	return optional == nil || (optional != nil && *optional == false)
+	return optional == nil || (optional != nil && !*optional)
 }

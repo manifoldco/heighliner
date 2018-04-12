@@ -26,10 +26,26 @@ type NetworkPolicyList struct {
 
 // NetworkPolicySpec describes the specification for Network.
 type NetworkPolicySpec struct {
-	IngressClass    string                 `json:"ingressClass"`
-	SessionAffinity corev1.ServiceAffinity `json:"sessionAffinity"`
-	Ports           []NetworkPort          `json:"ports"`
-	DNS             []NetworkDNS           `json:"dns"`
+	// Microservice represents the name of the Microservice which we want to
+	// create DNS entries for.
+	// If the Microservice Name is not provided, the name of the NetworkPolicy
+	// CRD will be used.
+	Microservice string `json:"microservice,omitempty"`
+
+	// SessionAffinity lets you define a config for SessionAffinity. If no
+	// config is provided, SessionAffinity will be "None".
+	SessionAffinity *corev1.SessionAffinityConfig `json:"sessionAffinity"`
+
+	// Ports which we want to be accessible for the associated Microservice.
+	Ports []NetworkPort `json:"ports"`
+
+	// ExternalDNS represents the domain specification for a Microservice
+	// externally.
+	ExternalDNS []ExternalDNS `json:"externalDNS"`
+
+	// UpdateStrategy defines how Heighliner will transition DNS from one
+	// version to another.
+	UpdateStrategy UpdateStrategy `json:"updateStrategy"`
 }
 
 // NetworkPort describes a port that is exposed for a given service.
@@ -45,12 +61,20 @@ type NetworkPort struct {
 	Port int32 `json:"port"`
 }
 
-// NetworkDNS describes a DNS entry for a given service, allowing external
+// ExternalDNS describes a DNS entry for a given service, allowing external
 // access to the service.
 // If no port is provided but a DNS entry is provided, a default headless port
 // will be created with the internalPort `8080`.
-type NetworkDNS struct {
-	// The domain name that will be linked to the service.
+type ExternalDNS struct {
+	// IngressClass represents the class that is given to the Ingress controller
+	// to handle DNS entries. This defaults to the default at the controller
+	// configuration level.
+	IngressClass string `json:"ingressClass"`
+
+	// The domain name that will be linked to the service. This can be a full
+	// fledged domain like `dashboard.heighliner.com` or it could be a templated
+	// domain like `{.Version}.{.Name}.pr.heighliner.com`. Templated domains get
+	// the data from a Release object, possible values are `Version` and `Name`.
 	Domain string `json:"domain"`
 
 	// TTL in seconds for the DNS entry, defaults to `300`.
@@ -73,6 +97,30 @@ type NetworkDNS struct {
 	Port string `json:"port"`
 }
 
+// UpdateStrategy allows a strategy to be defined which will allow the
+// NetworkPolicy controller to determine when and how to transition from one
+// version to another for a specific Microservice.
+// The fields defined on each strategy will be used as label selectors to select
+// the correct VersionedMicroservice.
+type UpdateStrategy struct {
+	Manual *ManualUpdateStrategy `json:"manual"`
+	Latest *LatestUpdateStrategy `json:"latest"`
+}
+
+// ManualUpdateStrategy is an UpdateStrategy that is purely manual. The
+// Controller will put in the labels as provided and won't take any other action
+// to detect possible versions.
+type ManualUpdateStrategy struct {
+	// SemVer is the SemVer annotation of the specific release we want to use
+	// for this Microservice.
+	SemVer *SemVerRelease `json:"semVer"`
+}
+
+// LatestUpdateStrategy will monitor the available release for a given
+// Microservice and use the latest available release to link to the internal and
+// external DNS.
+type LatestUpdateStrategy struct{}
+
 // NetworkPolicyValidationSchema represents the OpenAPIV3Schema validation for
 // the NetworkPolicy CRD.
 var NetworkPolicyValidationSchema = &v1beta1.CustomResourceValidation{
@@ -80,6 +128,7 @@ var NetworkPolicyValidationSchema = &v1beta1.CustomResourceValidation{
 		Required: []string{"spec"},
 		Properties: map[string]v1beta1.JSONSchemaProps{
 			"spec": {
+				Required: []string{"updateStrategy"},
 				Properties: map[string]v1beta1.JSONSchemaProps{
 					"ingressClass": {
 						Type: proto.String,
@@ -91,7 +140,7 @@ var NetworkPolicyValidationSchema = &v1beta1.CustomResourceValidation{
 							},
 						},
 					},
-					"dns": {
+					"externalDNS": {
 						Items: &v1beta1.JSONSchemaPropsOrArray{
 							Schema: &v1beta1.JSONSchemaProps{
 								Required: []string{"domain"},

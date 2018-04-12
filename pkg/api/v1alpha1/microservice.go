@@ -30,7 +30,6 @@ type MicroserviceList struct {
 type MicroserviceSpec struct {
 	ImagePolicy        core.LocalObjectReference `json:"imagePolicy"`
 	AvailabilityPolicy core.LocalObjectReference `json:"availabilityPolicy,omitempty"`
-	NetworkPolicy      core.LocalObjectReference `json:"networkPolicy,omitempty"`
 	ConfigPolicy       core.LocalObjectReference `json:"configPolicy,omitempty"`
 	SecurityPolicy     core.LocalObjectReference `json:"securityPolicy,omitempty"`
 }
@@ -50,7 +49,6 @@ var MicroserviceValidationSchema = &v1beta1.CustomResourceValidation{
 				Properties: map[string]v1beta1.JSONSchemaProps{
 					"imagePolicy":        requiredObjectReference,
 					"availabilityPolicy": requiredObjectReference,
-					"networkPolicy":      requiredObjectReference,
 				},
 			},
 			"status": ReleaseValidationSchema,

@@ -3,11 +3,9 @@ package svc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
@@ -123,7 +121,7 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 		// doesn't matter if this errors, we just won't log the change if it
 		// does
 		if err == nil && !patcher.IsEmptyPatch(patch) {
-			log.Printf("Synced Microservice %s %s with version %s", vsvc.Name, release.Name, release.Version)
+			log.Printf("Synced Microservice %s %s with version %s", vsvc.Name, release.Name(), release.Version())
 		}
 
 		deployedReleases = append(deployedReleases, release)
@@ -157,11 +155,6 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, releas
 		return nil, err
 	}
 
-	networkPolicySpec, err := c.getNetworkPolicySpec(crd)
-	if err != nil {
-		return nil, err
-	}
-
 	securityPolicySpec, err := c.getSecurityPolicySpec(crd)
 	if err != nil {
 		return nil, err
@@ -181,12 +174,12 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, releas
 	delete(annotations, "kubekit-hlnr-microservice/last-applied-configuration")
 	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
-	name := fullReleaseName(crd.Name, release)
+	name := release.FullName(crd.Name)
 	labels := k8sutils.Labels(crd.Labels, crd.ObjectMeta)
 	labels["hlnr.io/microservice.full_name"] = name
 	labels["hlnr.io/microservice.name"] = crd.Name
-	labels["hlnr.io/microservice.release"] = release.Name
-	labels["hlnr.io/microservice.version"] = release.Version
+	labels["hlnr.io/microservice.release"] = release.Name()
+	labels["hlnr.io/microservice.version"] = release.Version()
 
 	// TODO(jelmer): currently we need to specify the TypeMeta here. We need to
 	// investigate a way to automate this depending on the passed in Object. The
@@ -212,7 +205,6 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, releas
 		},
 		Spec: v1alpha1.VersionedMicroserviceSpec{
 			Availability: availabilityPolicySpec,
-			Network:      networkPolicySpec,
 			Config:       configPolicySpec,
 			Security:     securityPolicySpec,
 			Containers:   containers,
@@ -270,26 +262,6 @@ func (c *Controller) getAvailabilityPolicySpec(crd *v1alpha1.Microservice) (*v1a
 	return &availabilityPolicy.Spec, nil
 }
 
-func (c *Controller) getNetworkPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.NetworkPolicySpec, error) {
-	networkPolicy := &v1alpha1.NetworkPolicy{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "NetworkPolicy",
-			APIVersion: "hlnr.io/v1alpha1",
-		},
-	}
-
-	apName := crd.Spec.NetworkPolicy.Name
-	if apName == "" {
-		return nil, nil
-	}
-
-	if err := c.patcher.Get(networkPolicy, crd.Namespace, apName); err != nil {
-		return nil, err
-	}
-
-	return &networkPolicy.Spec, nil
-}
-
 func (c *Controller) getConfigPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.ConfigPolicySpec, error) {
 	configPolicy := &v1alpha1.ConfigPolicy{
 		TypeMeta: metav1.TypeMeta{
@@ -345,7 +317,7 @@ func deprecateReleases(cl deleteClient, crd *v1alpha1.Microservice, desired []v1
 	deprecated := deprecatedReleases(desired, crd.Status.Releases)
 
 	for _, release := range deprecated {
-		name := fullReleaseName(crd.Name, &release)
+		name := release.FullName(crd.Name)
 		svc := &v1alpha1.VersionedMicroservice{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "VersionedMicroservice",
@@ -391,13 +363,4 @@ CurrentReleaseLoop:
 	}
 
 	return deprecated
-}
-
-func fullReleaseName(crdName string, release *v1alpha1.Release) string {
-	releaseName := ""
-	if release.Name != crdName {
-		releaseName = fmt.Sprintf("-%s", release.Name)
-	}
-
-	return strings.ToLower(fmt.Sprintf("%s%s-%s", crdName, releaseName, release.Version))
 }
