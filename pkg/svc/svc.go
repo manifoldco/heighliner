@@ -29,25 +29,6 @@ var (
 		Validation: v1alpha1.MicroserviceValidationSchema,
 	}
 
-	// NetworkPolicyResource describes the CRD configuration for the
-	// NetworkPolicy CRD.
-	NetworkPolicyResource = kubekit.CustomResource{
-		Name:    "networkpolicy",
-		Plural:  "networkpolicies",
-		Group:   v1alpha1.GroupName,
-		Version: v1alpha1.Version,
-		Scope:   v1beta1.NamespaceScoped,
-		Aliases: []string{"np"},
-		Object:  &v1alpha1.NetworkPolicy{},
-		Validation: &v1beta1.CustomResourceValidation{
-			OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
-				Properties: map[string]v1beta1.JSONSchemaProps{
-					"spec": v1alpha1.NetworkPolicyValidationSchema,
-				},
-			},
-		},
-	}
-
 	// AvailabilityPolicyResource describes the CRD configuration for the
 	// AvailabilityPolicy CRD.
 	AvailabilityPolicyResource = kubekit.CustomResource{
@@ -77,25 +58,6 @@ var (
 		Aliases:    []string{"ip"},
 		Object:     &v1alpha1.ImagePolicy{},
 		Validation: v1alpha1.ImagePolicyValidationSchema,
-	}
-
-	// VersioningPolicyResource describes the CRD configuration for the
-	// VersioningPolicy CRD.
-	VersioningPolicyResource = kubekit.CustomResource{
-		Name:    "versioningpolicy",
-		Plural:  "versioningpolicies",
-		Group:   v1alpha1.GroupName,
-		Version: v1alpha1.Version,
-		Scope:   v1beta1.NamespaceScoped,
-		Aliases: []string{"vp"},
-		Object:  &v1alpha1.VersioningPolicy{},
-		Validation: &v1beta1.CustomResourceValidation{
-			OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
-				Properties: map[string]v1beta1.JSONSchemaProps{
-					"spec": v1alpha1.VersioningPolicyValidationSchema,
-				},
-			},
-		},
 	}
 
 	// SecurityPolicyResource describes the CRD configuration for the

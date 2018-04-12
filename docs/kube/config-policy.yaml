@@ -54,7 +54,7 @@ spec:
       containers:
         - name: configpolicy-controller
           image: manifoldco/heighliner:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           args:
           - cpw
           resources:
