@@ -6,7 +6,7 @@ import (
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 )
 
-func TestServiceForRelease(t *testing.T) {
+func TestBuildServiceForRelease(t *testing.T) {
 	release := &v1alpha1.Release{
 		SemVer: &v1alpha1.SemVerRelease{
 			Name:    "test-application",
@@ -20,7 +20,7 @@ func TestServiceForRelease(t *testing.T) {
 			Spec: v1alpha1.NetworkPolicySpec{},
 		}
 
-		obj, err := serviceForRelease(np, release)
+		obj, err := buildServiceForRelease(np, release, true)
 		if obj != nil {
 			t.Errorf("Expected object to be nil, got %#v", obj)
 		}
@@ -43,7 +43,7 @@ func TestServiceForRelease(t *testing.T) {
 			},
 		}
 
-		obj, err := serviceForRelease(np, release)
+		obj, err := buildServiceForRelease(np, release, true)
 		if obj == nil {
 			t.Errorf("Expected object to be nil, got %#v", obj)
 		}

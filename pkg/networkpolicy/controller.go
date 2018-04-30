@@ -13,6 +13,7 @@ import (
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -97,11 +98,103 @@ func (c *Controller) syncNetworking(obj interface{}) error {
 		return err
 	}
 
-	for _, release := range ms.Status.Releases {
-		fmt.Println(release)
+	releaseGroups := groupReleases(ms.Status.Releases)
+	for name, releaseGroup := range releaseGroups {
+		if err := syncReleaseGroup(c.patcher, np, releaseGroup); err != nil {
+			log.Printf("Error syncing release '%s': %s", name, err)
+			continue
+		}
+
+		if err := syncSelectedRelease(c.patcher, np, releaseGroup); err != nil {
+			log.Printf("Error syncing selected release '%s': %s", name, err)
+			continue
+		}
 	}
 
 	return nil
+}
+
+type patchClient interface {
+	Apply(runtime.Object, ...patcher.OptionFunc) ([]byte, error)
+}
+
+func syncReleaseGroup(cl patchClient, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+	if len(np.Spec.Ports) != 0 {
+		for _, release := range releases {
+			svc, err := buildServiceForRelease(np, &release, true)
+			if err != nil {
+				return err
+			}
+
+			// we don't always want a service for each release
+			if svc == nil {
+				return nil
+			}
+
+			_, err = cl.Apply(svc)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func syncSelectedRelease(cl patchClient, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+	if len(np.Spec.ExternalDNS) == 0 {
+		return nil
+	}
+
+	fmt.Println("Syncing selected release")
+
+	// TODO(jelmer): this should come from a factory based on the update strategy.
+	releaser := &LatestReleaser{}
+
+	name := np.Name
+
+	externalRelease, err := releaser.ExternalRelease(releases)
+	if err != nil {
+		log.Printf("Could not get ExternalRelease for %s: %s", name, err)
+		return err
+	}
+
+	svc, err := buildServiceForRelease(np, externalRelease, false)
+	if err != nil {
+		log.Printf("Error creating service for release %s: %s", name, err)
+		return err
+	}
+
+	if _, err := cl.Apply(svc); err != nil {
+		log.Printf("Error syncing service for release %s: %s", name, err)
+		return err
+	}
+
+	ing, err := buildIngressForRelease(np, externalRelease)
+	if err != nil {
+		log.Printf("Error building Ingress for %s: %s", name, err)
+		return err
+	}
+
+	if _, err := cl.Apply(ing); err != nil {
+		log.Printf("Error syncing Ingress for release %s: %s", name, err)
+		return err
+	}
+
+	return nil
+}
+
+func groupReleases(releases []v1alpha1.Release) map[string][]v1alpha1.Release {
+	grouped := map[string][]v1alpha1.Release{}
+
+	for _, release := range releases {
+		key := release.Name()
+		if _, ok := grouped[key]; !ok {
+			grouped[key] = []v1alpha1.Release{}
+		}
+
+		grouped[key] = append(grouped[key], release)
+	}
+
+	return grouped
 }
 
 type getClient interface {

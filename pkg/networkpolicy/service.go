@@ -7,16 +7,28 @@ import (
 	"github.com/jelmersnoeck/kubekit"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func serviceForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (runtime.Object, error) {
+func buildServiceForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Release, versioned bool) (*corev1.Service, error) {
 	if len(np.Spec.Ports) == 0 {
 		return nil, nil
 	}
 
+	name := np.Name
+	if versioned {
+		name = release.FullName(np.Name)
+	}
+
 	labels := k8sutils.Labels(np.Labels, np.ObjectMeta)
+	labels["hlnr.io/microservice.full_name"] = release.FullName(np.Name)
+	labels["hlnr.io/microservice.name"] = np.Name
+	labels["hlnr.io/microservice.release"] = release.Name()
+	labels["hlnr.io/microservice.version"] = release.Version()
+
+	selector := labels
+	delete(selector, k8sutils.LabelServiceKey)
+
 	annotations := k8sutils.Annotations(np.Annotations, v1alpha1.Version, np)
 
 	sessionAffinity := corev1.ServiceAffinityNone
@@ -30,7 +42,9 @@ func serviceForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (r
 			APIVersion: "v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        np.Name,
+			// TODO(jelmer): we'll want a hashed name here based on timestamp
+			// etc.
+			Name:        name,
 			Namespace:   np.Namespace,
 			Labels:      labels,
 			Annotations: annotations,
@@ -42,11 +56,9 @@ func serviceForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (r
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:  corev1.ServiceTypeNodePort,
-			Ports: getServicePorts(np.Spec.Ports),
-			Selector: map[string]string{
-				k8sutils.LabelServiceKey: np.Name,
-			},
+			Type:                  corev1.ServiceTypeNodePort,
+			Ports:                 getServicePorts(np.Spec.Ports),
+			Selector:              selector,
 			SessionAffinity:       sessionAffinity,
 			SessionAffinityConfig: np.Spec.SessionAffinity,
 		},

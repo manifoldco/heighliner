@@ -57,9 +57,8 @@ spec:
   - name: headless
     port: 80
     targetPort: 8080
-  dns:
+  externalDNS:
   - domain: hello-world.demo.cool
-    ingressClass: nginx
     ttl: 10
     disableTLS: false
     TLSGroup: hello-world
