@@ -58,10 +58,14 @@ spec:
     port: 80
     targetPort: 8080
   externalDNS:
-  - domain: hello-world.arigato.tools
+  - domain: "{{.FullName}}.arigato.tools"
     ttl: 10
     disableTLS: false
     TLSGroup: hello-world
+    port: headless
+  - domain: "{{.Name}}.arigato.tools"
+    ttl: 10
+    disableTLS: true
     port: headless
   - domain: unsecure-hello-world.arigato.tools
     ttl: 10
