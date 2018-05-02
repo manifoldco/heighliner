@@ -119,7 +119,7 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 
 		// refresh the vsvc
 		if err := c.patcher.Get(vsvc, vsvc.Namespace, vsvc.Name); err != nil {
-			log.Printf("Error refreshing VersionedMicroservice: %s", err)
+			log.Printf("Erorr refreshing VersionedMicroservice: %s", err)
 			// we don't need to return the error here, we want to be able to
 			// deploy other releases still
 			continue
