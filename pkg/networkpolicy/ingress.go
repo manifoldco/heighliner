@@ -30,7 +30,7 @@ func buildIngressForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Releas
 	}
 
 	labels := k8sutils.Labels(np.Labels, np.ObjectMeta)
-	labels["hlnr.io/microservice.full_name"] = release.FullName(np.Name)
+	labels["hlnr.io/microservice.full_name"] = release.FullName(np.Spec.Microservice)
 	labels["hlnr.io/microservice.name"] = np.Name
 	labels["hlnr.io/microservice.release"] = release.Name()
 	labels["hlnr.io/microservice.version"] = release.Version()

@@ -121,7 +121,7 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 		// doesn't matter if this errors, we just won't log the change if it
 		// does
 		if err == nil && !patcher.IsEmptyPatch(patch) {
-			log.Printf("Synced Microservice %s %s with version %s", vsvc.Name, release.Name(), release.Version())
+			log.Printf("Synced Microservice %s %s with version %s", vsvc.Name, release.FullName(svc.Name), release.Version())
 		}
 
 		deployedReleases = append(deployedReleases, release)
@@ -133,17 +133,15 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 	}
 
 	// new release objects, store them
-	if len(releaseDiff(svc.Status.Releases, deployedReleases)) > 0 {
-		svc.Status.Releases = deployedReleases
-		// need to specify types again until we resolve the mapping issue
-		svc.TypeMeta = metav1.TypeMeta{
-			Kind:       "Microservice",
-			APIVersion: "hlnr.io/v1alpha1",
-		}
-		if _, err := c.patcher.Apply(svc); err != nil {
-			log.Printf("Error syncing Microservice %s: %s", svc.Name, err)
-			return err
-		}
+	svc.Status.Releases = deployedReleases
+	// need to specify types again until we resolve the mapping issue
+	svc.TypeMeta = metav1.TypeMeta{
+		Kind:       "Microservice",
+		APIVersion: "hlnr.io/v1alpha1",
+	}
+	if _, err := c.patcher.Apply(svc); err != nil {
+		log.Printf("Error syncing Microservice %s: %s", svc.Name, err)
+		return err
 	}
 
 	return nil
@@ -334,12 +332,6 @@ func deprecateReleases(cl deleteClient, crd *v1alpha1.Microservice, desired []v1
 	}
 
 	return nil
-}
-
-func releaseDiff(desired, current []v1alpha1.Release) []v1alpha1.Release {
-	// this could be done quicker/better but it's nice to reuse the same
-	// function instead of implementing another algorithm.
-	return append(deprecatedReleases(desired, current), deprecatedReleases(current, desired)...)
 }
 
 func deprecatedReleases(desired, current []v1alpha1.Release) []v1alpha1.Release {

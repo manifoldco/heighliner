@@ -98,7 +98,7 @@ func (c *Controller) syncNetworking(obj interface{}) error {
 		return err
 	}
 
-	releaseGroups := groupReleases(ms.Status.Releases)
+	releaseGroups := groupReleases(ms.Name, ms.Status.Releases)
 	for name, releaseGroup := range releaseGroups {
 		if err := syncReleaseGroup(c.patcher, np, releaseGroup); err != nil {
 			log.Printf("Error syncing release '%s': %s", name, err)
@@ -182,11 +182,11 @@ func syncSelectedRelease(cl patchClient, np *v1alpha1.NetworkPolicy, releases []
 	return nil
 }
 
-func groupReleases(releases []v1alpha1.Release) map[string][]v1alpha1.Release {
+func groupReleases(name string, releases []v1alpha1.Release) map[string][]v1alpha1.Release {
 	grouped := map[string][]v1alpha1.Release{}
 
 	for _, release := range releases {
-		key := release.Name()
+		key := release.FullName(name)
 		if _, ok := grouped[key]; !ok {
 			grouped[key] = []v1alpha1.Release{}
 		}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/manifoldco/heighliner/pkg/k8sutils"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,19 +32,23 @@ func (r Release) String() string {
 // Microservice as a prefix.
 func (r Release) FullName(name string) string {
 	if r.SemVer != nil {
-		return r.SemVer.fullName(name)
+		return hashedName(name, k8sutils.ShortHash(r.SemVer.fullName(), 5))
 	}
 
 	panic("No release type specified")
 }
 
-// Name returns the name of the release.
+// Name returns the name of the actual version.
 func (r Release) Name() string {
 	if r.SemVer != nil {
 		return r.SemVer.Name
 	}
 
 	panic("No release type specified")
+}
+
+func hashedName(name, appendix string) string {
+	return fmt.Sprintf("%s-%s", name, appendix)
 }
 
 // Version returns the version of the release.
@@ -80,18 +85,13 @@ func (r *SemVerRelease) String() string {
 	return fmt.Sprintf("%s-%s%s", r.Name, r.Version, build)
 }
 
-func (r *SemVerRelease) fullName(name string) string {
-	releaseName := ""
-	if r.Name != name {
-		releaseName = fmt.Sprintf("-%s", r.Name)
-	}
-
+func (r *SemVerRelease) fullName() string {
 	build := ""
 	if r.Build != "" {
 		build = fmt.Sprintf("-%s", r.Build)
 	}
 
-	return strings.ToLower(fmt.Sprintf("%s%s-%s%s", name, releaseName, r.Version, build))
+	return strings.ToLower(fmt.Sprintf("%s-%s%s", r.Name, r.Version, build))
 }
 
 // ReleaseValidationSchema represents the OpenAPIv3 validation schema for a

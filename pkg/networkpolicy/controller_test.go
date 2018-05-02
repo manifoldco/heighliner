@@ -31,7 +31,7 @@ func TestGroupReleases(t *testing.T) {
 				},
 			}
 
-			results := groupReleases(releases)
+			results := groupReleases("test-deploy", releases)
 			expectedLength := 2
 			if len(results) != expectedLength {
 				t.Errorf("Expected length to be %d, got %d", expectedLength, len(results))
