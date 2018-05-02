@@ -11,6 +11,11 @@ import (
 
 // Release represents a specific release for a version of an image.
 type Release struct {
+	// OwnerReferences represents who the owner is of this release. This will
+	// be set by the Microservice controller and reference a
+	// VersionedMicroservice.
+	OwnerReferences []metav1.OwnerReference `json:"ownerReference,omitempty"`
+
 	// Image is the fully qualified image name that can be used to download the
 	// image.
 	Image string `json:"image"`

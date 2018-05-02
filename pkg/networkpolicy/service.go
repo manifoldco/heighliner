@@ -4,7 +4,6 @@ import (
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
-	"github.com/jelmersnoeck/kubekit"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -44,16 +43,11 @@ func buildServiceForRelease(svc *v1alpha1.Microservice, np *v1alpha1.NetworkPoli
 		ObjectMeta: metav1.ObjectMeta{
 			// TODO(jelmer): we'll want a hashed name here based on timestamp
 			// etc.
-			Name:        name,
-			Namespace:   svc.Namespace,
-			Labels:      labels,
-			Annotations: annotations,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(
-					svc,
-					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(svc)),
-				),
-			},
+			Name:            name,
+			Namespace:       svc.Namespace,
+			Labels:          labels,
+			Annotations:     annotations,
+			OwnerReferences: release.OwnerReferences,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:                  corev1.ServiceTypeNodePort,

@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jelmersnoeck/kubekit"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
 	"k8s.io/api/extensions/v1beta1"
@@ -47,16 +46,11 @@ func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolic
 			APIVersion: "extensions/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        ms.Name,
-			Namespace:   ms.Namespace,
-			Labels:      labels,
-			Annotations: annotations,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(
-					ms,
-					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(ms)),
-				),
-			},
+			Name:            ms.Name,
+			Namespace:       ms.Namespace,
+			Labels:          labels,
+			Annotations:     annotations,
+			OwnerReferences: release.OwnerReferences,
 		},
 		Spec: v1beta1.IngressSpec{
 			TLS:   getIngressTLS(np.Spec.ExternalDNS),

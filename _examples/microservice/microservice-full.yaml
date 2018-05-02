@@ -24,11 +24,6 @@ status:
       name: hello-world
       version: latest
       released: 2018-04-10T08:24:48Z
-  - image: hlnr/hello-world:1.2.3
-    semVer:
-      name: hello-world
-      version: 1.2.3
-      released: 2018-04-10T08:25:48Z
 
 ---
 

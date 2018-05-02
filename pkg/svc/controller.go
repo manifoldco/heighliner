@@ -117,6 +117,23 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 			continue
 		}
 
+		// refresh the vsvc
+		if err := c.patcher.Get(vsvc, vsvc.Namespace, vsvc.Name); err != nil {
+			log.Printf("Error refreshing VersionedMicroservice: %s", err)
+			// we don't need to return the error here, we want to be able to
+			// deploy other releases still
+			continue
+		}
+
+		// Add OwnerReference to Release. We can use this later on to link to
+		// other parts of the system.
+		release.OwnerReferences = []metav1.OwnerReference{
+			*metav1.NewControllerRef(
+				vsvc,
+				v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(vsvc)),
+			),
+		}
+
 		patch, err = k8sutils.CleanupPatchAnnotations(patch, "hlnr-microservice")
 		// doesn't matter if this errors, we just won't log the change if it
 		// does

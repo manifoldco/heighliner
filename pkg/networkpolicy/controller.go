@@ -76,7 +76,6 @@ func (c *Controller) run(ctx context.Context) {
 			},
 			UpdateFunc: func(old, new interface{}) {
 				c.syncNetworking(new)
-				// TODO(jelmer): delete old networking objects
 			},
 			DeleteFunc: func(obj interface{}) {
 				cp := obj.(*v1alpha1.NetworkPolicy).DeepCopy()
