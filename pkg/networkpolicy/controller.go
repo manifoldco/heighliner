@@ -2,7 +2,6 @@ package networkpolicy
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -100,12 +99,12 @@ func (c *Controller) syncNetworking(obj interface{}) error {
 
 	releaseGroups := groupReleases(ms.Name, ms.Status.Releases)
 	for name, releaseGroup := range releaseGroups {
-		if err := syncReleaseGroup(c.patcher, np, releaseGroup); err != nil {
+		if err := syncReleaseGroup(c.patcher, ms, np, releaseGroup); err != nil {
 			log.Printf("Error syncing release '%s': %s", name, err)
 			continue
 		}
 
-		if err := syncSelectedRelease(c.patcher, np, releaseGroup); err != nil {
+		if err := syncSelectedRelease(c.patcher, ms, np, releaseGroup); err != nil {
 			log.Printf("Error syncing selected release '%s': %s", name, err)
 			continue
 		}
@@ -118,10 +117,10 @@ type patchClient interface {
 	Apply(runtime.Object, ...patcher.OptionFunc) ([]byte, error)
 }
 
-func syncReleaseGroup(cl patchClient, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+func syncReleaseGroup(cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
 	if len(np.Spec.Ports) != 0 {
 		for _, release := range releases {
-			svc, err := buildServiceForRelease(np, &release, true)
+			svc, err := buildServiceForRelease(svc, np, &release, true)
 			if err != nil {
 				return err
 			}
@@ -139,12 +138,10 @@ func syncReleaseGroup(cl patchClient, np *v1alpha1.NetworkPolicy, releases []v1a
 	return nil
 }
 
-func syncSelectedRelease(cl patchClient, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+func syncSelectedRelease(cl patchClient, ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
 	if len(np.Spec.ExternalDNS) == 0 {
 		return nil
 	}
-
-	fmt.Println("Syncing selected release")
 
 	// TODO(jelmer): this should come from a factory based on the update strategy.
 	releaser := &LatestReleaser{}
@@ -157,7 +154,7 @@ func syncSelectedRelease(cl patchClient, np *v1alpha1.NetworkPolicy, releases []
 		return err
 	}
 
-	svc, err := buildServiceForRelease(np, externalRelease, false)
+	svc, err := buildServiceForRelease(ms, np, externalRelease, false)
 	if err != nil {
 		log.Printf("Error creating service for release %s: %s", name, err)
 		return err
@@ -168,7 +165,7 @@ func syncSelectedRelease(cl patchClient, np *v1alpha1.NetworkPolicy, releases []
 		return err
 	}
 
-	ing, err := buildIngressForRelease(np, externalRelease)
+	ing, err := buildIngressForRelease(ms, np, externalRelease)
 	if err != nil {
 		log.Printf("Error building Ingress for %s: %s", name, err)
 		return err

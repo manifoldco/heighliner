@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestBuildServiceForRelease(t *testing.T) {
@@ -15,12 +16,18 @@ func TestBuildServiceForRelease(t *testing.T) {
 		},
 	}
 
+	ms := &v1alpha1.Microservice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-application",
+		},
+	}
+
 	t.Run("without ports", func(t *testing.T) {
 		np := &v1alpha1.NetworkPolicy{
 			Spec: v1alpha1.NetworkPolicySpec{},
 		}
 
-		obj, err := buildServiceForRelease(np, release, true)
+		obj, err := buildServiceForRelease(ms, np, release, true)
 		if obj != nil {
 			t.Errorf("Expected object to be nil, got %#v", obj)
 		}
@@ -43,7 +50,7 @@ func TestBuildServiceForRelease(t *testing.T) {
 			},
 		}
 
-		obj, err := buildServiceForRelease(np, release, true)
+		obj, err := buildServiceForRelease(ms, np, release, true)
 		if obj == nil {
 			t.Errorf("Expected object to be nil, got %#v", obj)
 		}

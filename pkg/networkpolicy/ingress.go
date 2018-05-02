@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func buildIngressForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (*v1beta1.Ingress, error) {
+func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (*v1beta1.Ingress, error) {
 	if len(np.Spec.ExternalDNS) == 0 {
 		return nil, nil
 	}
@@ -30,8 +30,8 @@ func buildIngressForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Releas
 	}
 
 	labels := k8sutils.Labels(np.Labels, np.ObjectMeta)
-	labels["hlnr.io/microservice.full_name"] = release.FullName(np.Spec.Microservice)
-	labels["hlnr.io/microservice.name"] = np.Name
+	labels["hlnr.io/microservice.full_name"] = release.FullName(ms.Name)
+	labels["hlnr.io/microservice.name"] = ms.Name
 	labels["hlnr.io/microservice.release"] = release.Name()
 	labels["hlnr.io/microservice.version"] = release.Version()
 
@@ -47,20 +47,20 @@ func buildIngressForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Releas
 			APIVersion: "extensions/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        np.Name,
-			Namespace:   np.Namespace,
+			Name:        ms.Name,
+			Namespace:   ms.Namespace,
 			Labels:      labels,
 			Annotations: annotations,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(
-					np,
-					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(np)),
+					ms,
+					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(ms)),
 				),
 			},
 		},
 		Spec: v1beta1.IngressSpec{
 			TLS:   getIngressTLS(np.Spec.ExternalDNS),
-			Rules: getIngressRules(np.Name, np.Spec.ExternalDNS),
+			Rules: getIngressRules(ms.Name, np.Spec.ExternalDNS),
 		},
 	}
 

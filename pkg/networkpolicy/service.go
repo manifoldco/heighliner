@@ -10,19 +10,19 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func buildServiceForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Release, versioned bool) (*corev1.Service, error) {
+func buildServiceForRelease(svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release, versioned bool) (*corev1.Service, error) {
 	if len(np.Spec.Ports) == 0 {
 		return nil, nil
 	}
 
-	name := np.Name
+	name := svc.Name
 	if versioned {
-		name = release.FullName(np.Spec.Microservice)
+		name = release.FullName(svc.Name)
 	}
 
 	labels := k8sutils.Labels(np.Labels, np.ObjectMeta)
-	labels["hlnr.io/microservice.full_name"] = release.FullName(np.Spec.Microservice)
-	labels["hlnr.io/microservice.name"] = np.Name
+	labels["hlnr.io/microservice.full_name"] = release.FullName(svc.Name)
+	labels["hlnr.io/microservice.name"] = svc.Name
 	labels["hlnr.io/microservice.release"] = release.Name()
 	labels["hlnr.io/microservice.version"] = release.Version()
 
@@ -45,13 +45,13 @@ func buildServiceForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Releas
 			// TODO(jelmer): we'll want a hashed name here based on timestamp
 			// etc.
 			Name:        name,
-			Namespace:   np.Namespace,
+			Namespace:   svc.Namespace,
 			Labels:      labels,
 			Annotations: annotations,
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(
-					np,
-					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(np)),
+					svc,
+					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(svc)),
 				),
 			},
 		},
