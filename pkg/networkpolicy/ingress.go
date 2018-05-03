@@ -1,6 +1,8 @@
 package networkpolicy
 
 import (
+	"bytes"
+	"html/template"
 	"strconv"
 	"strings"
 
@@ -40,28 +42,38 @@ func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolic
 	// TODO (jelmer): different TTLs should mean different Ingresses
 	annotations["external-dns.alpha.kubernetes.io/ttl"] = ttlValue(np.Spec.ExternalDNS[0].TTL)
 
+	ingressTLS, err := getIngressTLS(ms, release, np.Spec.ExternalDNS)
+	if err != nil {
+		return nil, err
+	}
+
+	ingressRules, err := getIngressRules(ms, release, np.Spec.ExternalDNS)
+	if err != nil {
+		return nil, err
+	}
+
 	ing := &v1beta1.Ingress{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Ingress",
 			APIVersion: "extensions/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            ms.Name,
+			Name:            release.FullName(ms.Name),
 			Namespace:       ms.Namespace,
 			Labels:          labels,
 			Annotations:     annotations,
 			OwnerReferences: release.OwnerReferences,
 		},
 		Spec: v1beta1.IngressSpec{
-			TLS:   getIngressTLS(np.Spec.ExternalDNS),
-			Rules: getIngressRules(ms.Name, np.Spec.ExternalDNS),
+			TLS:   ingressTLS,
+			Rules: ingressRules,
 		},
 	}
 
 	return ing, nil
 }
 
-func getIngressRules(serviceName string, records []v1alpha1.ExternalDNS) []v1beta1.IngressRule {
+func getIngressRules(ms *v1alpha1.Microservice, release *v1alpha1.Release, records []v1alpha1.ExternalDNS) ([]v1beta1.IngressRule, error) {
 	rules := make([]v1beta1.IngressRule, len(records))
 	for i, r := range records {
 		servicePort := "headless"
@@ -69,15 +81,20 @@ func getIngressRules(serviceName string, records []v1alpha1.ExternalDNS) []v1bet
 			servicePort = r.Port
 		}
 
+		domain, err := templatedDomain(ms, release, r.Domain)
+		if err != nil {
+			return nil, err
+		}
+
 		rules[i] = v1beta1.IngressRule{
-			Host: r.Domain,
+			Host: domain,
 			IngressRuleValue: v1beta1.IngressRuleValue{
 				HTTP: &v1beta1.HTTPIngressRuleValue{
 					Paths: []v1beta1.HTTPIngressPath{
 						{
 							Path: "/",
 							Backend: v1beta1.IngressBackend{
-								ServiceName: serviceName,
+								ServiceName: ms.Name,
 								ServicePort: intstr.FromString(servicePort),
 							},
 						},
@@ -87,10 +104,10 @@ func getIngressRules(serviceName string, records []v1alpha1.ExternalDNS) []v1bet
 		}
 	}
 
-	return rules
+	return rules, nil
 }
 
-func getIngressTLS(records []v1alpha1.ExternalDNS) []v1beta1.IngressTLS {
+func getIngressTLS(ms *v1alpha1.Microservice, release *v1alpha1.Release, records []v1alpha1.ExternalDNS) ([]v1beta1.IngressTLS, error) {
 	tls := make([]v1beta1.IngressTLS, len(records))
 
 	for i, dns := range records {
@@ -103,13 +120,40 @@ func getIngressTLS(records []v1alpha1.ExternalDNS) []v1beta1.IngressTLS {
 			secretName = dns.TLSGroup
 		}
 
+		domain, err := templatedDomain(ms, release, dns.Domain)
+		if err != nil {
+			return nil, err
+		}
+
 		tls[i] = v1beta1.IngressTLS{
-			Hosts:      []string{dns.Domain},
+			Hosts:      []string{domain},
 			SecretName: "certificates-" + secretName,
 		}
 	}
 
-	return tls
+	return tls, nil
+}
+
+func templatedDomain(ms *v1alpha1.Microservice, release *v1alpha1.Release, domain string) (string, error) {
+	tmpl, err := template.New("domain").Parse(domain)
+	if err != nil {
+		return "", err
+	}
+
+	data := struct {
+		FullName string
+		Name     string
+	}{
+
+		FullName: release.FullName(ms.Name),
+		Name:     release.Name(),
+	}
+
+	buf := bytes.NewBufferString("")
+	if err := tmpl.Execute(buf, data); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func ttlValue(ttl int32) string {
