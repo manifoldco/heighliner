@@ -1,44 +1,44 @@
-package vsvc
+package networkpolicy
 
 import (
-	"log"
 	"strconv"
 	"strings"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
-
-	"github.com/jelmersnoeck/kubekit"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// getService creates the Service Object for a VersionedMicroservice.
-func getIngress(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
-	if crd.Spec.Network == nil || crd.Spec.Network.DNS == nil {
-		log.Printf("No DNS specified for %s, skipping ingress.", crd.Name)
+func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (*v1beta1.Ingress, error) {
+	if len(np.Spec.ExternalDNS) == 0 {
 		return nil, nil
 	}
 
-	dns := crd.Spec.Network.DNS
-	labels := k8sutils.Labels(crd.Labels, crd.ObjectMeta)
-
-	ingressClass := crd.Spec.Network.IngressClass
+	// TODO (jelmer): if there's different ingress classes, this should deploy
+	// different ingress objects. For now, this will do.
+	ingressClass := np.Spec.ExternalDNS[0].IngressClass
 	if ingressClass == "" {
 		ingressClass = "nginx"
 	}
 
-	domains := make([]string, len(dns))
-	for i, record := range dns {
+	domains := make([]string, len(np.Spec.ExternalDNS))
+	for i, record := range np.Spec.ExternalDNS {
 		domains[i] = record.Domain
 	}
 
-	annotations := k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd)
+	labels := k8sutils.Labels(np.Labels, np.ObjectMeta)
+	labels["hlnr.io/microservice.full_name"] = release.FullName(ms.Name)
+	labels["hlnr.io/microservice.name"] = ms.Name
+	labels["hlnr.io/microservice.release"] = release.Name()
+	labels["hlnr.io/microservice.version"] = release.Version()
+
+	annotations := k8sutils.Annotations(np.Annotations, v1alpha1.Version, np)
 	annotations["kubernetes.io/ingress.class"] = ingressClass
 	annotations["external-dns.alpha.kubernetes.io/hostname"] = strings.Join(domains, ",")
-	annotations["external-dns.alpha.kubernetes.io/ttl"] = ttlValue(dns[0].TTL)
+	// TODO (jelmer): different TTLs should mean different Ingresses
+	annotations["external-dns.alpha.kubernetes.io/ttl"] = ttlValue(np.Spec.ExternalDNS[0].TTL)
 
 	ing := &v1beta1.Ingress{
 		TypeMeta: metav1.TypeMeta{
@@ -46,27 +46,22 @@ func getIngress(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 			APIVersion: "extensions/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        crd.Name,
-			Namespace:   crd.Namespace,
-			Labels:      labels,
-			Annotations: annotations,
-			OwnerReferences: []metav1.OwnerReference{
-				*metav1.NewControllerRef(
-					crd,
-					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(crd)),
-				),
-			},
+			Name:            ms.Name,
+			Namespace:       ms.Namespace,
+			Labels:          labels,
+			Annotations:     annotations,
+			OwnerReferences: release.OwnerReferences,
 		},
 		Spec: v1beta1.IngressSpec{
-			TLS:   getIngressTLS(dns),
-			Rules: getIngressRules(crd.Name, dns),
+			TLS:   getIngressTLS(np.Spec.ExternalDNS),
+			Rules: getIngressRules(ms.Name, np.Spec.ExternalDNS),
 		},
 	}
 
 	return ing, nil
 }
 
-func getIngressRules(serviceName string, records []v1alpha1.NetworkDNS) []v1beta1.IngressRule {
+func getIngressRules(serviceName string, records []v1alpha1.ExternalDNS) []v1beta1.IngressRule {
 	rules := make([]v1beta1.IngressRule, len(records))
 	for i, r := range records {
 		servicePort := "headless"
@@ -95,12 +90,12 @@ func getIngressRules(serviceName string, records []v1alpha1.NetworkDNS) []v1beta
 	return rules
 }
 
-func getIngressTLS(records []v1alpha1.NetworkDNS) []v1beta1.IngressTLS {
+func getIngressTLS(records []v1alpha1.ExternalDNS) []v1beta1.IngressTLS {
 	tls := make([]v1beta1.IngressTLS, len(records))
 
 	for i, dns := range records {
 		if dns.DisableTLS {
-			return nil
+			continue
 		}
 
 		secretName := "heighliner-components"

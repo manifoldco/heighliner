@@ -98,14 +98,6 @@ func (c *Controller) applyCRD(obj interface{}, opts ...patcher.OptionFunc) error
 		return err
 	}
 
-	if err := updateObject("Service", vsvc, c.patcher, getService); err != nil {
-		return err
-	}
-
-	if err := updateObject("Ingress", vsvc, c.patcher, getIngress); err != nil && !errors.IsNoObjectGiven(err) {
-		return err
-	}
-
 	if err := updateObject("PodDisruptionBudget", vsvc, c.patcher, getPodDisruptionBudget, patcher.WithDeleteFirst()); err != nil && !errors.IsNoObjectGiven(err) {
 		return err
 	}

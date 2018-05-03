@@ -20,7 +20,8 @@ var (
 	}
 
 	npwFlags struct {
-		Namespace string `long:"namespace" env:"NAMESPACE" description:"The namespace we'll watch for CRDs. By default we'll watch all namespaces."`
+		Namespace    string `long:"namespace" env:"NAMESPACE" description:"The namespace we'll watch for CRDs. By default we'll watch all namespaces."`
+		IngressClass string `long:"ingress-class" env:"HLNR_INGRESS_CLASS" description:"The default ingress class which will be used by Ingresses to have external DNS handled." default:"nginx"`
 	}
 )
 

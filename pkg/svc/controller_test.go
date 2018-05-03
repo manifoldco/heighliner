@@ -14,13 +14,17 @@ func TestDeprecatedReleases(t *testing.T) {
 	t.Run("with no difference", func(t *testing.T) {
 		releases := []v1alpha1.Release{
 			{
-				Name:     "my-test1",
-				Version:  "1.2.3",
+				SemVer: &v1alpha1.SemVerRelease{
+					Name:    "my-test1",
+					Version: "1.2.3",
+				},
 				Released: released,
 			},
 			{
-				Name:     "my-test1",
-				Version:  "1.2.4",
+				SemVer: &v1alpha1.SemVerRelease{
+					Name:    "my-test1",
+					Version: "1.2.4",
+				},
 				Released: released,
 			},
 		}
@@ -34,31 +38,41 @@ func TestDeprecatedReleases(t *testing.T) {
 		t.Run("with different versions", func(t *testing.T) {
 			desired := []v1alpha1.Release{
 				{
-					Name:     "my-test1",
-					Version:  "1.2.3",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.3",
+					},
 					Released: released,
 				},
 				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.4",
+					},
 					Released: released,
 				},
 			}
 
 			current := []v1alpha1.Release{
 				{
-					Name:     "my-test1",
-					Version:  "1.2.2",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.2",
+					},
 					Released: released,
 				},
 				{
-					Name:     "my-test1",
-					Version:  "1.2.3",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.3",
+					},
 					Released: released,
 				},
 				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.4",
+					},
 					Released: released,
 				},
 			}
@@ -71,21 +85,27 @@ func TestDeprecatedReleases(t *testing.T) {
 		t.Run("with missing versions", func(t *testing.T) {
 			desired := []v1alpha1.Release{
 				{
-					Name:     "my-test1",
-					Version:  "1.2.3",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.3",
+					},
 					Released: released,
 				},
 				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.4",
+					},
 					Released: released,
 				},
 			}
 
 			current := []v1alpha1.Release{
 				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.4",
+					},
 					Released: released,
 				},
 			}
@@ -97,132 +117,13 @@ func TestDeprecatedReleases(t *testing.T) {
 	})
 }
 
-func TestReleaseDiff(t *testing.T) {
-	released := metav1.Now()
-	t.Run("with no difference", func(t *testing.T) {
-		releases := []v1alpha1.Release{
-			{
-				Name:     "my-test1",
-				Version:  "1.2.3",
-				Released: released,
-			},
-			{
-				Name:     "my-test1",
-				Version:  "1.2.4",
-				Released: released,
-			},
-		}
-
-		if ln := len(releaseDiff(releases, releases)); ln != 0 {
-			t.Errorf("Expected length to equal 0, got %d", ln)
-		}
-	})
-
-	t.Run("with differences", func(t *testing.T) {
-		t.Run("with different versions", func(t *testing.T) {
-			desired := []v1alpha1.Release{
-				{
-					Name:     "my-test1",
-					Version:  "1.2.3",
-					Released: released,
-				},
-				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
-					Released: released,
-				},
-			}
-
-			current := []v1alpha1.Release{
-				{
-					Name:     "my-test1",
-					Version:  "1.2.2",
-					Released: released,
-				},
-				{
-					Name:     "my-test1",
-					Version:  "1.2.3",
-					Released: released,
-				},
-				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
-					Released: released,
-				},
-			}
-
-			if ln := len(releaseDiff(desired, current)); ln != 1 {
-				t.Errorf("Expected length to equal 1, got %d", ln)
-			}
-		})
-
-		t.Run("with missing versions", func(t *testing.T) {
-			desired := []v1alpha1.Release{
-				{
-					Name:     "my-test1",
-					Version:  "1.2.3",
-					Released: released,
-				},
-				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
-					Released: released,
-				},
-			}
-
-			current := []v1alpha1.Release{
-				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
-					Released: released,
-				},
-			}
-
-			if ln := len(releaseDiff(desired, current)); ln != 1 {
-				t.Errorf("Expected length to equal 1, got %d", ln)
-			}
-		})
-
-		t.Run("with a mix of missing versions", func(t *testing.T) {
-			desired := []v1alpha1.Release{
-				{
-					Name:     "my-test1",
-					Version:  "1.2.3",
-					Released: released,
-				},
-				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
-					Released: released,
-				},
-			}
-
-			current := []v1alpha1.Release{
-				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
-					Released: released,
-				},
-				{
-					Name:     "my-test1",
-					Version:  "1.2.5",
-					Released: released,
-				},
-			}
-
-			if ln := len(releaseDiff(desired, current)); ln != 2 {
-				t.Errorf("Expected length to equal 2, got %d", ln)
-			}
-		})
-	})
-}
-
 func TestDeprecateReleases(t *testing.T) {
 	cl := &kubekitClient{}
 	cl.deleteFunc = func(obj runtime.Object, objs ...patcher.OptionFunc) error {
 		vsvc := obj.(*v1alpha1.VersionedMicroservice)
-		if vsvc.Name != "test-service-my-test1-1.2.2" {
-			t.Errorf("Expected name to be '', got '%s'", vsvc.Name)
+		expected := "test-service-9d641053af"
+		if vsvc.Name != expected {
+			t.Errorf("Expected name to be '%s', got '%s'", expected, vsvc.Name)
 		}
 		return nil
 	}
@@ -230,13 +131,17 @@ func TestDeprecateReleases(t *testing.T) {
 	released := metav1.Now()
 	releases := []v1alpha1.Release{
 		{
-			Name:     "my-test1",
-			Version:  "1.2.3",
+			SemVer: &v1alpha1.SemVerRelease{
+				Name:    "my-test1",
+				Version: "1.2.3",
+			},
 			Released: released,
 		},
 		{
-			Name:     "my-test1",
-			Version:  "1.2.4",
+			SemVer: &v1alpha1.SemVerRelease{
+				Name:    "my-test1",
+				Version: "1.2.4",
+			},
 			Released: released,
 		},
 	}
@@ -248,18 +153,24 @@ func TestDeprecateReleases(t *testing.T) {
 		Status: v1alpha1.MicroserviceStatus{
 			Releases: []v1alpha1.Release{
 				{
-					Name:     "my-test1",
-					Version:  "1.2.2",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.2",
+					},
 					Released: released,
 				},
 				{
-					Name:     "my-test1",
-					Version:  "1.2.3",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.3",
+					},
 					Released: released,
 				},
 				{
-					Name:     "my-test1",
-					Version:  "1.2.4",
+					SemVer: &v1alpha1.SemVerRelease{
+						Name:    "my-test1",
+						Version: "1.2.4",
+					},
 					Released: released,
 				},
 			},

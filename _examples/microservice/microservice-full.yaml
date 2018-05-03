@@ -20,9 +20,10 @@ spec:
 status:
   releases:
   - image: hlnr/hello-world:latest
-    name: hello-world
-    version: latest
-    released: 2018-04-10T08:24:48Z
+    semVer:
+      name: hello-world
+      version: latest
+      released: 2018-04-10T08:24:48Z
 
 ---
 
@@ -51,21 +52,23 @@ kind: NetworkPolicy
 metadata:
   name: hello-world
 spec:
-  ingressClass: nginx
+  microservice: hello-world
   ports:
   - name: headless
     port: 80
     targetPort: 8080
-  dns:
-  - domain: hello-world.demo.cool
+  externalDNS:
+  - domain: hello-world.arigato.tools
     ttl: 10
     disableTLS: false
     TLSGroup: hello-world
     port: headless
-  - domain: unsecure-hello-world.demo.cool
+  - domain: unsecure-hello-world.arigato.tools
     ttl: 10
     disableTLS: true
     port: headless
+  updateStrategy:
+    latest: {}
 
 ---
 

@@ -11,6 +11,8 @@ import (
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -69,8 +71,12 @@ func (c *Controller) run(ctx context.Context) {
 		c.namespace,
 		&NetworkPolicyResource,
 		cache.ResourceEventHandlerFuncs{
-			AddFunc:    func(obj interface{}) {},
-			UpdateFunc: func(old, new interface{}) {},
+			AddFunc: func(obj interface{}) {
+				c.syncNetworking(obj)
+			},
+			UpdateFunc: func(old, new interface{}) {
+				c.syncNetworking(new)
+			},
 			DeleteFunc: func(obj interface{}) {
 				cp := obj.(*v1alpha1.NetworkPolicy).DeepCopy()
 				log.Printf("Deleting NetworkPolicy %s", cp.Name)
@@ -79,4 +85,134 @@ func (c *Controller) run(ctx context.Context) {
 	)
 
 	go watcher.Run(ctx.Done())
+}
+
+func (c *Controller) syncNetworking(obj interface{}) error {
+	np := obj.(*v1alpha1.NetworkPolicy)
+
+	ms, err := getMicroservice(c.patcher, np)
+	if err != nil {
+		log.Printf("Could not retrieve Microservice for %s: %s", np.Name, err)
+		return err
+	}
+
+	releaseGroups := groupReleases(ms.Name, ms.Status.Releases)
+	for name, releaseGroup := range releaseGroups {
+		if err := syncReleaseGroup(c.patcher, ms, np, releaseGroup); err != nil {
+			log.Printf("Error syncing release '%s': %s", name, err)
+			continue
+		}
+
+		if err := syncSelectedRelease(c.patcher, ms, np, releaseGroup); err != nil {
+			log.Printf("Error syncing selected release '%s': %s", name, err)
+			continue
+		}
+	}
+
+	return nil
+}
+
+type patchClient interface {
+	Apply(runtime.Object, ...patcher.OptionFunc) ([]byte, error)
+}
+
+func syncReleaseGroup(cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+	if len(np.Spec.Ports) != 0 {
+		for _, release := range releases {
+			svc, err := buildServiceForRelease(svc, np, &release, true)
+			if err != nil {
+				return err
+			}
+
+			// we don't always want a service for each release
+			if svc == nil {
+				return nil
+			}
+
+			_, err = cl.Apply(svc)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func syncSelectedRelease(cl patchClient, ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+	if len(np.Spec.ExternalDNS) == 0 {
+		return nil
+	}
+
+	// TODO(jelmer): this should come from a factory based on the update strategy.
+	releaser := &LatestReleaser{}
+
+	name := np.Name
+
+	externalRelease, err := releaser.ExternalRelease(releases)
+	if err != nil {
+		log.Printf("Could not get ExternalRelease for %s: %s", name, err)
+		return err
+	}
+
+	svc, err := buildServiceForRelease(ms, np, externalRelease, false)
+	if err != nil {
+		log.Printf("Error creating service for release %s: %s", name, err)
+		return err
+	}
+
+	if _, err := cl.Apply(svc); err != nil {
+		log.Printf("Error syncing service for release %s: %s", name, err)
+		return err
+	}
+
+	ing, err := buildIngressForRelease(ms, np, externalRelease)
+	if err != nil {
+		log.Printf("Error building Ingress for %s: %s", name, err)
+		return err
+	}
+
+	if _, err := cl.Apply(ing); err != nil {
+		log.Printf("Error syncing Ingress for release %s: %s", name, err)
+		return err
+	}
+
+	return nil
+}
+
+func groupReleases(name string, releases []v1alpha1.Release) map[string][]v1alpha1.Release {
+	grouped := map[string][]v1alpha1.Release{}
+
+	for _, release := range releases {
+		key := release.FullName(name)
+		if _, ok := grouped[key]; !ok {
+			grouped[key] = []v1alpha1.Release{}
+		}
+
+		grouped[key] = append(grouped[key], release)
+	}
+
+	return grouped
+}
+
+type getClient interface {
+	Get(interface{}, string, string) error
+}
+
+func getMicroservice(cl getClient, np *v1alpha1.NetworkPolicy) (*v1alpha1.Microservice, error) {
+	ms := &v1alpha1.Microservice{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Microservice",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+
+	name := np.Name
+	if np.Spec.Microservice != "" {
+		name = np.Spec.Microservice
+	}
+
+	if err := cl.Get(ms, np.Namespace, name); err != nil {
+		return nil, err
+	}
+
+	return ms, nil
 }
