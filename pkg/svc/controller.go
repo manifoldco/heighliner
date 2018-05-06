@@ -2,6 +2,7 @@ package svc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"os"
@@ -78,6 +79,21 @@ func (c *Controller) run(ctx context.Context) {
 				c.patchMicroservice(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
+				oldData, err := getStatuslessData(old)
+				if err != nil {
+					return
+				}
+
+				newData, err := getStatuslessData(new)
+				if err != nil {
+					return
+				}
+
+				// this was a status update, ignore patching
+				if string(oldData) == string(newData) {
+					return
+				}
+
 				c.patchMicroservice(new)
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -88,6 +104,25 @@ func (c *Controller) run(ctx context.Context) {
 	)
 
 	go watcher.Run(ctx.Done())
+}
+
+func getStatuslessData(obj interface{}) ([]byte, error) {
+	svc := obj.(*v1alpha1.Microservice).DeepCopy()
+
+	byteData, err := json.Marshal(svc)
+	if err != nil {
+		log.Printf("Error marshalling Microservice %s: %s", svc.Name, err)
+		return nil, err
+	}
+
+	var mapData map[string]interface{}
+	if err := json.Unmarshal(byteData, &mapData); err != nil {
+		log.Printf("Error unmarshalling Microservice %s: %s", svc.Name, err)
+		return nil, err
+	}
+
+	delete(mapData, "status")
+	return json.Marshal(mapData)
 }
 
 func (c *Controller) patchMicroservice(obj interface{}) error {
@@ -156,6 +191,7 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 		Kind:       "Microservice",
 		APIVersion: "hlnr.io/v1alpha1",
 	}
+
 	if _, err := c.patcher.Apply(svc); err != nil {
 		log.Printf("Error syncing Microservice %s: %s", svc.Name, err)
 		return err
@@ -165,6 +201,11 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 }
 
 func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, release *v1alpha1.Release) (*v1alpha1.VersionedMicroservice, error) {
+	// Do another deepcopy here to prevent altering the Microservice
+	// labels/annotations when we use the reference to add these to the
+	// VersionedMicroservice.
+	crd = crd.DeepCopy()
+
 	availabilityPolicySpec, err := c.getAvailabilityPolicySpec(crd)
 	if err != nil {
 		return nil, err
