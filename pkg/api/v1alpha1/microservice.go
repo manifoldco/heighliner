@@ -47,8 +47,7 @@ var MicroserviceValidationSchema = &v1beta1.CustomResourceValidation{
 			"spec": {
 				Required: []string{"imagePolicy"},
 				Properties: map[string]v1beta1.JSONSchemaProps{
-					"imagePolicy":        requiredObjectReference,
-					"availabilityPolicy": requiredObjectReference,
+					"imagePolicy": requiredObjectReference,
 				},
 			},
 			"status": ReleaseValidationSchema,

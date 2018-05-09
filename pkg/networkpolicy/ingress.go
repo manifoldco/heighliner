@@ -42,6 +42,11 @@ func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolic
 	// TODO (jelmer): different TTLs should mean different Ingresses
 	annotations["external-dns.alpha.kubernetes.io/ttl"] = ttlValue(np.Spec.ExternalDNS[0].TTL)
 
+	// Disable SSL redirects when we don't have TLS enabled.
+	if np.Spec.ExternalDNS[0].DisableTLS {
+		annotations["nginx.ingress.kubernetes.io/ssl-redirect"] = "false"
+	}
+
 	ingressTLS, err := getIngressTLS(ms, release, np.Spec.ExternalDNS)
 	if err != nil {
 		return nil, err

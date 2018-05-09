@@ -109,6 +109,10 @@ func (c *Controller) syncNetworking(obj interface{}) error {
 		}
 	}
 
+	if len(releaseGroups) == 0 {
+		log.Printf("No release groups to sync")
+	}
+
 	return nil
 }
 
