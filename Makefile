@@ -1,7 +1,7 @@
 PKG=github.com/manifoldco/heighliner
 API_VERSIONS=$(sort $(patsubst pkg/api/%/,%,$(dir $(wildcard pkg/api/*/))))
 
-ci: lint test
+ci: lint test release
 .PHONY: ci
 
 #################################################
@@ -85,7 +85,14 @@ DOCKER_RELEASES=$(addprefix release-,$(CMDs))
 
 VCS_SHA?=$(shell git rev-parse --verify HEAD)
 BUILD_DATE?=$(shell git show -s --date=iso8601-strict --pretty=format:%cd $$VCS_SHA)
-VCS_BRANCH?=$(shell git branch | grep \* | cut -f2 -d' ')
+
+VCS_BRANCH?=
+ifdef TRAVIS_PULL_REQUEST_BRANCH
+	VCS_SHA=$(TRAVIS_PULL_REQUEST_SHA)
+	VCS_BRANCH=$(TRAVIS_PULL_REQUEST_BRANCH)
+else
+	VCS_BRANCH=$(shell git branch | grep \* | cut -f2 -d' ')
+endif
 
 RELEASE_VERSION?=$(shell git describe --always --tags --dirty | sed 's/^v//')
 ifdef TRAVIS_TAG
@@ -93,7 +100,6 @@ ifdef TRAVIS_TAG
 endif
 
 ifneq ($(VCS_BRANCH),$(BASE_BRANCH))
-	IS_BRANCH=true
 	RELEASE_VERSION=$(shell echo $(VCS_BRANCH) | sed "s/[^[:alnum:].-]/-/g")-$(VCS_SHA)
 endif
 
@@ -131,7 +137,10 @@ $(DOCKER_IMAGES:%=%-dev): docker-%-dev: build/docker/%/Dockerfile bin/%-dev
 docker: $(DOCKER_IMAGES)
 docker-dev: $(DOCKER_IMAGES:%=%-dev)
 
-$(DOCKER_RELEASES): release-%: docker-%
+docker-login:
+	docker login -u="$$DOCKER_USERNAME" -p="$$DOCKER_PASSWORD"
+
+$(DOCKER_RELEASES): release-%: docker-login docker-%
 	docker tag $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@) $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(RELEASE_VERSION)
 	docker push $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(RELEASE_VERSION)
 ifeq ($(VCS_BRANCH),$(BASE_BRANCH))
@@ -144,7 +153,7 @@ else
 endif
 release: $(DOCKER_RELEASES)
 
-.PHONY: $(BINS:%=$(PREFIX)%) $(DOCKER_IMAGES) $(CMDs:%=build/docker/%/Dockerfile)
+.PHONY: $(BINS:%=$(PREFIX)%) $(DOCKER_IMAGES) $(CMDs:%=build/docker/%/Dockerfile) $(DOCKER_RELEASES) release docker-login
 
 
 #################################################
