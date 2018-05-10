@@ -1,7 +1,7 @@
 PKG=github.com/manifoldco/heighliner
 API_VERSIONS=$(sort $(patsubst pkg/api/%/,%,$(dir $(wildcard pkg/api/*/))))
 
-ci: lint test
+ci: lint test release
 .PHONY: ci
 
 #################################################
@@ -70,6 +70,8 @@ generated: $(GENERATED_FILES)
 #################################################
 # Building
 #################################################
+BASE_BRANCH=master
+DOCKER_REPOSITORY=arigato
 GOOS_OVERRIDE?=
 PREFIX?=
 
@@ -79,6 +81,27 @@ DOCKER_MAKE=GOOS_OVERRIDE='GOOS=linux' PREFIX=build/docker/$1/ make build/docker
 CMDs=$(sort $(patsubst cmd/%/,%,$(dir $(wildcard cmd/*/))))
 BINS=$(addprefix bin/,$(CMDs))
 DOCKER_IMAGES=$(addprefix docker-,$(CMDs))
+DOCKER_RELEASES=$(addprefix release-,$(CMDs))
+
+VCS_SHA?=$(shell git rev-parse --verify HEAD)
+BUILD_DATE?=$(shell git show -s --date=iso8601-strict --pretty=format:%cd $$VCS_SHA)
+
+VCS_BRANCH?=
+ifdef TRAVIS_PULL_REQUEST_BRANCH
+	VCS_SHA=$(TRAVIS_PULL_REQUEST_SHA)
+	VCS_BRANCH=$(TRAVIS_PULL_REQUEST_BRANCH)
+else
+	VCS_BRANCH=$(shell git branch | grep \* | cut -f2 -d' ')
+endif
+
+RELEASE_VERSION?=$(shell git describe --always --tags --dirty | sed 's/^v//')
+ifdef TRAVIS_TAG
+	RELEASE_VERSION=$(shell echo $(TRAVIS_TAG) | sed 's/^v//')
+endif
+
+ifneq ($(VCS_BRANCH),$(BASE_BRANCH))
+	RELEASE_VERSION=$(shell echo $(VCS_BRANCH) | sed "s/[^[:alnum:].-]/-/g")-$(VCS_SHA)
+endif
 
 $(CMDs:%=build/docker/%/Dockerfile):
 	mkdir -p $(@D)
@@ -91,14 +114,47 @@ $(BINS:%=%-dev):
 bins: $(BINS:%=$(PREFIX)%)
 
 $(DOCKER_IMAGES):
-	docker build -t manifoldco/heighliner:latest --build-arg BINARY=$(patsubst docker-%,bin/%,$@) .
+	docker build -t $(DOCKER_REPOSITORY)/$(patsubst docker-%,%,$@):latest \
+		--label "org.label-schema.build-date"="$(BUILD_DATE)" \
+		--label "org.label-schema.name"="$(patsubst docker-%,%,$@)" \
+		--label "org.label-schema.vcs-ref"="$(VCS_SHA)" \
+		--label "org.label-schema.vendor"="Arigato Machine Inc." \
+		--label "org.label-schema.version"="$(RELEASE_VERSION)" \
+		--label "org.vcs-branch"="$(VCS_BRANCH)" \
+		--build-arg BINARY=$(patsubst docker-%,bin/%,$@) \
+		.
 $(DOCKER_IMAGES:%=%-dev): docker-%-dev: build/docker/%/Dockerfile bin/%-dev
-	docker build -t manifoldco/heighliner:latest --build-arg BINARY=bin/$(patsubst docker-%-dev,%,$@) build/docker/$(patsubst docker-%-dev,%,$@)
+	docker build -t $(DOCKER_REPOSITORY)/$(patsubst docker-%-dev,%,$@):latest \
+		--label "org.label-schema.build-date"="$(BUILD_DATE)" \
+		--label "org.label-schema.name"="$(patsubst docker-%,%,$@)" \
+		--label "org.label-schema.vcs-ref"="$(VCS_SHA)" \
+		--label "org.label-schema.vendor"="Arigato Machine Inc." \
+		--label "org.label-schema.version"="$(RELEASE_VERSION)" \
+		--label "org.vcs-branch"="$(VCS_BRANCH)" \
+		--build-arg BINARY=bin/$(patsubst docker-%-dev,%,$@) \
+		build/docker/$(patsubst docker-%-dev,%,$@)
 
 docker: $(DOCKER_IMAGES)
 docker-dev: $(DOCKER_IMAGES:%=%-dev)
 
-.PHONY: $(BINS:%=$(PREFIX)%) $(DOCKER_IMAGES) $(CMDs:%=build/docker/%/Dockerfile)
+docker-login:
+	docker login -u="$$DOCKER_USERNAME" -p="$$DOCKER_PASSWORD"
+
+$(DOCKER_RELEASES): release-%: docker-login docker-%
+	docker tag $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@) $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(RELEASE_VERSION)
+	docker push $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(RELEASE_VERSION)
+ifeq ($(VCS_BRANCH),$(BASE_BRANCH))
+	# On master, we want to push latest
+	docker push $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):latest
+else
+	# On branches, we want to push specific branch version and latest branch
+	docker tag $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@) $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(VCS_BRANCH)
+	docker push $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(VCS_BRANCH)
+endif
+release: $(DOCKER_RELEASES)
+
+.PHONY: $(BINS:%=$(PREFIX)%) $(DOCKER_IMAGES) $(CMDs:%=build/docker/%/Dockerfile) $(DOCKER_RELEASES) release docker-login
+
 
 #################################################
 # Building the examples
