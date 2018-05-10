@@ -91,7 +91,11 @@ ifdef TRAVIS_PULL_REQUEST_BRANCH
 	VCS_SHA=$(TRAVIS_PULL_REQUEST_SHA)
 	VCS_BRANCH=$(TRAVIS_PULL_REQUEST_BRANCH)
 else
+ifdef TRAVIS_BRANCH
+	VCS_BRANCH=$(TRAVIS_BRANCH)
+else
 	VCS_BRANCH=$(shell git branch | grep \* | cut -f2 -d' ')
+endif
 endif
 
 RELEASE_VERSION?=$(shell git describe --always --tags --dirty | sed 's/^v//')
