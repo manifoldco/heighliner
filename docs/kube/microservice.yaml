@@ -8,7 +8,7 @@ rules:
     verbs: ["*"]
   - apiGroups: ["hlnr.io"]
     resources: ["versionedmicroservices"]
-    verbs: ["update", "create"]
+    verbs: ["get", "update", "create", "delete"]
   - apiGroups: ["hlnr.io"]
     resources:
     - "imagepolicies"
