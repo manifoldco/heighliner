@@ -20,10 +20,10 @@ spec:
 status:
   releases:
   - image: hlnr/hello-world:latest
+    released: 2018-04-10T08:24:48Z
     semVer:
       name: hello-world
       version: latest
-      released: 2018-04-10T08:24:48Z
 
 ---
 
