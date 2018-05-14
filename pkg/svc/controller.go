@@ -136,7 +136,7 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 
 	var deployedReleases []v1alpha1.Release
 	for _, release := range imagePolicy.Status.Releases {
-		vsvc, err := c.getVersionedMicroservice(svc, &release)
+		vsvc, err := c.getVersionedMicroservice(svc, imagePolicy, &release)
 		if err != nil {
 			log.Printf("Error generating the VersionedMicroservice object error=%s", err)
 			// we don't need to return the error here, we want to be able to
@@ -200,7 +200,7 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 	return nil
 }
 
-func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, release *v1alpha1.Release) (*v1alpha1.VersionedMicroservice, error) {
+func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, ip *v1alpha1.ImagePolicy, release *v1alpha1.Release) (*v1alpha1.VersionedMicroservice, error) {
 	// Do another deepcopy here to prevent altering the Microservice
 	// labels/annotations when we use the reference to add these to the
 	// VersionedMicroservice.
@@ -221,7 +221,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, releas
 		return nil, err
 	}
 
-	containers, err := c.getContainers(crd, release)
+	containers, err := c.getContainers(crd, ip, release)
 	if err != nil {
 		return nil, err
 	}
@@ -260,20 +260,26 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, releas
 			},
 		},
 		Spec: v1alpha1.VersionedMicroserviceSpec{
-			Availability: availabilityPolicySpec,
-			Config:       configPolicySpec,
-			Security:     securityPolicySpec,
-			Containers:   containers,
+			Availability:     availabilityPolicySpec,
+			Config:           configPolicySpec,
+			Security:         securityPolicySpec,
+			Containers:       containers,
+			ImagePullSecrets: ip.Spec.ImagePullSecrets,
 		},
 	}, nil
 }
 
-func (c *Controller) getContainers(crd *v1alpha1.Microservice, release *v1alpha1.Release) ([]corev1.Container, error) {
+func (c *Controller) getContainers(crd *v1alpha1.Microservice, ip *v1alpha1.ImagePolicy, release *v1alpha1.Release) ([]corev1.Container, error) {
+	ipp := corev1.PullIfNotPresent
+	if ip.Spec.ImagePullPolicy != nil {
+		ipp = *ip.Spec.ImagePullPolicy
+	}
+
 	return []corev1.Container{
 		{
 			Name:            crd.Name,
 			Image:           release.Image,
-			ImagePullPolicy: corev1.PullIfNotPresent,
+			ImagePullPolicy: ipp,
 		},
 	}, nil
 }

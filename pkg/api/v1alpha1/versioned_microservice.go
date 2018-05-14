@@ -29,10 +29,11 @@ type VersionedMicroserviceList struct {
 // VersionedMicroserviceSpec represents the specification for a
 // VersionedMicroservice.
 type VersionedMicroserviceSpec struct {
-	Availability *AvailabilityPolicySpec `json:"availability,omitempty"`
-	Config       *ConfigPolicySpec       `json:"config,omitempty"`
-	Security     *SecurityPolicySpec     `json:"security,omitempty"`
-	Containers   []corev1.Container      `json:"containers"`
+	Availability     *AvailabilityPolicySpec       `json:"availability,omitempty"`
+	Config           *ConfigPolicySpec             `json:"config,omitempty"`
+	Security         *SecurityPolicySpec           `json:"security,omitempty"`
+	Containers       []corev1.Container            `json:"containers"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets"`
 }
 
 // VersionedMicroserviceValidationSchema represents the OpenAPIV3Scheme which
