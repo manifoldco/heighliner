@@ -59,6 +59,7 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) 
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
+					ImagePullSecrets:             crd.Spec.ImagePullSecrets,
 					ServiceAccountName:           crd.Spec.Security.ServiceAccountName,
 					AutomountServiceAccountToken: k8sutils.PtrBool(crd.Spec.Security.AutomountServiceAccountToken),
 					SecurityContext:              crd.Spec.Security.SecurityContext,
