@@ -53,7 +53,7 @@ spec:
       serviceAccountName: heighliner-configpolicy
       containers:
         - name: configpolicy-controller
-          image: manifoldco/heighliner:latest
+          image: arigato/heighliner:latest
           imagePullPolicy: IfNotPresent
           args:
           - cpw

@@ -60,7 +60,7 @@ spec:
       serviceAccountName: heighliner-microservice
       containers:
         - name: microservice-controller
-          image: manifoldco/heighliner:latest
+          image: arigato/heighliner:latest
           imagePullPolicy: Never
           args:
           - msvc
