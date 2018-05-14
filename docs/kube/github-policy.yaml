@@ -1,0 +1,60 @@
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: heighliner:github-policy
+rules:
+  - apiGroups: ["hlnr.io"]
+    resources: ["githubpolicies"]
+    verbs: ["*"]
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["*"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: heighliner:github-policy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: heighliner:github-policy
+subjects:
+  - name: heighliner-github-policy
+    namespace: hlnr-system
+    kind: ServiceAccount
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: heighliner-github-policy
+  namespace: hlnr-system
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: github-policy-controller
+  namespace: hlnr-system
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: github-policy-controller
+    spec:
+      serviceAccountName: heighliner-github-policy
+      containers:
+        - name: github-policy-controller
+          image: arigato/heighliner:latest
+          imagePullPolicy: Never
+          args:
+          - github-policy-controller
+          resources:
+            requests:
+              cpu: 100m
+              memory: 10Mi

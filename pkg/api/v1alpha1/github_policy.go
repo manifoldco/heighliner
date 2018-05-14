@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -59,4 +60,22 @@ type GitHubRelease struct {
 	Tag        string      `json:"tag"`
 	Level      SemVerLevel `json:"level"`
 	ReleasedAt metav1.Time `json:"releasedAt"`
+}
+
+// GitHubPolicyValidationSchema represents the OpenAPIV3Schema validation for
+// the GitHubPolicy CRD.
+var GitHubPolicyValidationSchema = &v1beta1.CustomResourceValidation{
+	OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
+		Required: []string{"spec"},
+		Properties: map[string]v1beta1.JSONSchemaProps{
+			"spec": {
+				Required: []string{"repositories"},
+				Items: &v1beta1.JSONSchemaPropsOrArray{
+					Schema: &v1beta1.JSONSchemaProps{
+						Required: []string{"name", "team", "configSecret"},
+					},
+				},
+			},
+		},
+	},
 }
