@@ -54,6 +54,9 @@ spec:
           imagePullPolicy: Never
           args:
           - github-policy-controller
+          env:
+            - name: DOMAIN
+              value: github-controller.arigato.tools
           resources:
             requests:
               cpu: 100m

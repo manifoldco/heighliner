@@ -45,3 +45,7 @@ required = [
 [[constraint]]
   name = "k8s.io/kubernetes"
   version = "v1.9.3"
+
+[[constraint]]
+  name = "github.com/google/go-github"
+  version = "15.0.0"

@@ -21,6 +21,7 @@ var (
 
 	ghpcFlags struct {
 		Namespace string `long:"namespace" env:"NAMESPACE" description:"The namespace we'll watch for CRDs. By default we'll watch all namespaces."`
+		Domain    string `long:"domain" env:"DOMAIN" description:"The domain name used for callbacks" required:"true"`
 	}
 )
 
@@ -41,7 +42,7 @@ func ghpcCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctrl, err := githubpolicy.NewController(cfg, cs, ghpcFlags.Namespace)
+	ctrl, err := githubpolicy.NewController(cfg, cs, ghpcFlags.Namespace, ghpcFlags.Domain)
 	if err != nil {
 		log.Printf("Could not create controller: %s\n", err)
 		return err

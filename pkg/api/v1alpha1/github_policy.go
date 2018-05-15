@@ -42,7 +42,7 @@ type GitHubRepository struct {
 	Name string `json:"name"`
 
 	// Owner is the owner of the repository, often specified as team.
-	Team string `json:"team"`
+	Owner string `json:"owner"`
 
 	// ConfigSecret represent the secret that houses the API token to
 	// communicate with the given repository.
