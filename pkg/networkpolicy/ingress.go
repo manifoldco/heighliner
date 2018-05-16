@@ -132,7 +132,7 @@ func getIngressTLS(ms *v1alpha1.Microservice, release *v1alpha1.Release, records
 
 		tls[i] = v1beta1.IngressTLS{
 			Hosts:      []string{domain},
-			SecretName: "certificates-" + secretName,
+			SecretName: secretName,
 		}
 	}
 
