@@ -133,8 +133,8 @@ func (c *Controller) syncPolicy(obj interface{}) error {
 	}
 
 	// remove the hooks that are not needed anymore
-	if err := cleanHooks(ghp); err != nil {
-		log.Printf("Error cleaning up hooks for %s (%s): %s", ghp.Name, ghp.Namespace, err)
+	if err := cleanStatus(ghp); err != nil {
+		log.Printf("Error cleaning up status for %s (%s): %s", ghp.Name, ghp.Namespace, err)
 		return err
 	}
 
@@ -153,7 +153,43 @@ func (c *Controller) syncPolicy(obj interface{}) error {
 	return nil
 }
 
-func cleanHooks(ghp *v1alpha1.GitHubPolicy) error {
+func cleanStatus(ghp *v1alpha1.GitHubPolicy) error {
+	for slug := range ghp.Status.Hooks {
+		found := false
+		for _, repo := range ghp.Spec.Repositories {
+			if slug == repo.Slug() {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			continue
+		}
+
+		// TODO(jelmer): ideally we'd try and deregister the hook as well, but
+		// we need to match this up with the "old" version of the repository.
+		delete(ghp.Status.Hooks, slug)
+	}
+
+	for slug := range ghp.Status.Releases {
+		found := false
+		for _, repo := range ghp.Spec.Repositories {
+			if slug == repo.Slug() {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			continue
+		}
+
+		// TODO(jelmer): ideally we'd try and deregister the hook as well, but
+		// we need to match this up with the "old" version of the repository.
+		delete(ghp.Status.Releases, slug)
+	}
+
 	return nil
 }
 

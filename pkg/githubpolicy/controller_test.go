@@ -25,10 +25,11 @@ func TestGetSecretAuthToken(t *testing.T) {
 	})
 
 	t.Run("with valid key", func(t *testing.T) {
+		expected := "uptownfunc"
 		cl.getFunc = func(obj interface{}, ns, name string) error {
 			secret := obj.(*v1.Secret)
-			secret.StringData = map[string]string{
-				"GITHUB_AUTH_TOKEN": "dXB0b3duZnVuYw==",
+			secret.Data = map[string][]byte{
+				"GITHUB_AUTH_TOKEN": []byte(expected),
 			}
 			return nil
 		}
@@ -38,8 +39,8 @@ func TestGetSecretAuthToken(t *testing.T) {
 			t.Errorf("Expected no error, got '%s'", err)
 		}
 
-		if expected := "uptownfunc"; string(token) != expected {
-			t.Errorf("Expected token to equal '%s', got '%s'", expected, string(token))
+		if token != expected {
+			t.Errorf("Expected token to equal '%s', got '%s'", expected, token)
 		}
 	})
 }
