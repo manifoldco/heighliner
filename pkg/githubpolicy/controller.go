@@ -32,6 +32,7 @@ type Controller struct {
 	patcher   *patcher.Patcher
 	namespace string
 	domain    string
+	insecure  bool
 }
 
 type getClient interface {
@@ -42,8 +43,22 @@ type webhookClient interface {
 	CreateHook(context.Context, string, string, *github.Hook) (*github.Hook, *github.Response, error)
 }
 
+type ghConfig struct {
+	insecure bool
+	domain   string
+}
+
+func (c ghConfig) URL() string {
+	scheme := "https://"
+	if c.insecure {
+		scheme = "http://"
+	}
+
+	return fmt.Sprintf("%s%s/payload", scheme, c.domain)
+}
+
 // NewController returns a new GitHubPolicy Controller.
-func NewController(cfg *rest.Config, cs kubernetes.Interface, namespace, domain string) (*Controller, error) {
+func NewController(cfg *rest.Config, cs kubernetes.Interface, namespace, domain string, insecure bool) (*Controller, error) {
 	rc, err := kubekit.RESTClient(cfg, &v1alpha1.SchemeGroupVersion, v1alpha1.AddToScheme)
 	if err != nil {
 		return nil, err
@@ -55,6 +70,7 @@ func NewController(cfg *rest.Config, cs kubernetes.Interface, namespace, domain 
 		patcher:   patcher.New("hlnr-github-policy", cmdutil.NewFactory(nil)),
 		namespace: namespace,
 		domain:    domain,
+		insecure:  insecure,
 	}, nil
 }
 
@@ -104,8 +120,13 @@ func (c *Controller) run(ctx context.Context) {
 func (c *Controller) syncPolicy(obj interface{}) error {
 	ghp := obj.(*v1alpha1.GitHubPolicy).DeepCopy()
 
+	cfg := ghConfig{
+		insecure: c.insecure,
+		domain:   c.domain,
+	}
+
 	for _, repo := range ghp.Spec.Repositories {
-		if err := ensureHooks(c.patcher, repo, ghp); err != nil {
+		if err := ensureHooks(c.patcher, repo, ghp, cfg); err != nil {
 			log.Printf("Could not ensure GitHub hooks for %s (%s): %s", repo.Slug(), ghp.Namespace, err)
 			continue
 		}
@@ -136,7 +157,7 @@ func cleanHooks(ghp *v1alpha1.GitHubPolicy) error {
 	return nil
 }
 
-func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.GitHubPolicy) error {
+func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.GitHubPolicy, cfg ghConfig) error {
 	authToken, err := getSecretAuthToken(cl, ghp.Namespace, repo.ConfigSecret.Name)
 	if err != nil {
 		return err
@@ -162,15 +183,16 @@ func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.Git
 			},
 			Config: map[string]interface{}{
 				"secret":       ghHook.Secret,
-				"url":          "http://localhost:4567/payload",
+				"url":          cfg.URL(),
 				"content_type": "json",
+				"insecure_ssl": cfg.insecure,
 			},
 		}
 
 		hook, rsp, err := client.Repositories.EditHook(ctx, repo.Owner, repo.Name, ghHook.ID, hook)
 		if err != nil {
 			if rsp.StatusCode == http.StatusNotFound {
-				ghHook, err = createWebhook(ctx, client.Repositories, repo.Owner, repo.Name)
+				ghHook, err = createWebhook(ctx, client.Repositories, repo.Owner, repo.Name, cfg)
 				if err != nil {
 					return err
 				}
@@ -185,7 +207,7 @@ func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.Git
 		}
 	} else {
 		// hooks are not set, create them
-		ghHook, err = createWebhook(ctx, client.Repositories, repo.Owner, repo.Name)
+		ghHook, err = createWebhook(ctx, client.Repositories, repo.Owner, repo.Name, cfg)
 		if err != nil {
 			return err
 		}
@@ -199,7 +221,7 @@ func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.Git
 	return nil
 }
 
-func createWebhook(ctx context.Context, cl webhookClient, owner, name string) (v1alpha1.GitHubHook, error) {
+func createWebhook(ctx context.Context, cl webhookClient, owner, name string, cfg ghConfig) (v1alpha1.GitHubHook, error) {
 	secret := k8sutils.RandomString(32)
 
 	hook := &github.Hook{
@@ -211,8 +233,9 @@ func createWebhook(ctx context.Context, cl webhookClient, owner, name string) (v
 		},
 		Config: map[string]interface{}{
 			"secret":       secret,
-			"url":          "http://localhost:4567/payload",
+			"url":          cfg.URL(),
 			"content_type": "json",
+			"insecure_ssl": cfg.insecure,
 		},
 	}
 

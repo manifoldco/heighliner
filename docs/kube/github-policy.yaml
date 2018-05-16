@@ -57,6 +57,8 @@ spec:
           env:
             - name: DOMAIN
               value: github-controller.arigato.tools
+            - name: INSECURE_SSL
+              value: "true"
           resources:
             requests:
               cpu: 100m

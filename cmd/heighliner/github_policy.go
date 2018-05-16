@@ -20,8 +20,9 @@ var (
 	}
 
 	ghpcFlags struct {
-		Namespace string `long:"namespace" env:"NAMESPACE" description:"The namespace we'll watch for CRDs. By default we'll watch all namespaces."`
-		Domain    string `long:"domain" env:"DOMAIN" description:"The domain name used for callbacks" required:"true"`
+		Namespace   string `long:"namespace" env:"NAMESPACE" description:"The namespace we'll watch for CRDs. By default we'll watch all namespaces."`
+		Domain      string `long:"domain" env:"DOMAIN" description:"The domain name used for callbacks" required:"true"`
+		InsecureSSL bool   `long:"insecure-ssl" env:"INSECURE_SSL" description:"Allow insecure callbacks to the webhook"`
 	}
 )
 
@@ -42,7 +43,7 @@ func ghpcCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctrl, err := githubpolicy.NewController(cfg, cs, ghpcFlags.Namespace, ghpcFlags.Domain)
+	ctrl, err := githubpolicy.NewController(cfg, cs, ghpcFlags.Namespace, ghpcFlags.Domain, ghpcFlags.InsecureSSL)
 	if err != nil {
 		log.Printf("Could not create controller: %s\n", err)
 		return err
