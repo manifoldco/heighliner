@@ -1,9 +1,9 @@
 package v1alpha1
 
 import (
+	"k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	core "k8s.io/kubernetes/pkg/apis/core"
 )
 
 // Microservice represents the definition which we'll use to define a deployable
@@ -28,10 +28,10 @@ type MicroserviceList struct {
 // MicroserviceSpec represents the specification for a Microservice. It houses
 // all the policies which we'll use to build a VersionedMicroservice.
 type MicroserviceSpec struct {
-	ImagePolicy        core.LocalObjectReference `json:"imagePolicy"`
-	AvailabilityPolicy core.LocalObjectReference `json:"availabilityPolicy,omitempty"`
-	ConfigPolicy       core.LocalObjectReference `json:"configPolicy,omitempty"`
-	SecurityPolicy     core.LocalObjectReference `json:"securityPolicy,omitempty"`
+	ImagePolicy        v1.LocalObjectReference `json:"imagePolicy"`
+	AvailabilityPolicy v1.LocalObjectReference `json:"availabilityPolicy,omitempty"`
+	ConfigPolicy       v1.LocalObjectReference `json:"configPolicy,omitempty"`
+	SecurityPolicy     v1.LocalObjectReference `json:"securityPolicy,omitempty"`
 }
 
 // MicroserviceStatus represents the status a specific Microservice is in.
