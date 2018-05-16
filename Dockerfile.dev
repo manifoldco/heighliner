@@ -1,4 +1,4 @@
-FROM scratch
+FROM manifoldco/scratch-certificates
 USER 7171:8787
 
 ARG BINARY
