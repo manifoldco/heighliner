@@ -2,14 +2,17 @@ package githubpolicy
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/google/go-github/github"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
+	"github.com/manifoldco/heighliner/pkg/k8sutils"
+	"golang.org/x/oauth2"
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
@@ -33,6 +36,10 @@ type Controller struct {
 
 type getClient interface {
 	Get(interface{}, string, string) error
+}
+
+type webhookClient interface {
+	CreateHook(context.Context, string, string, *github.Hook) (*github.Hook, *github.Response, error)
 }
 
 // NewController returns a new GitHubPolicy Controller.
@@ -98,21 +105,129 @@ func (c *Controller) syncPolicy(obj interface{}) error {
 	ghp := obj.(*v1alpha1.GitHubPolicy).DeepCopy()
 
 	for _, repo := range ghp.Spec.Repositories {
-		if err := syncRepository(c.patcher, ghp.Namespace, repo); err != nil {
-			log.Printf("Could not sync repository %s/%s: %s", repo.Owner, repo.Name, err)
+		if err := ensureHooks(c.patcher, repo, ghp); err != nil {
+			log.Printf("Could not ensure GitHub hooks for %s (%s): %s", repo.Slug(), ghp.Namespace, err)
+			continue
 		}
+	}
+
+	// remove the hooks that are not needed anymore
+	if err := cleanHooks(ghp); err != nil {
+		log.Printf("Error cleaning up hooks for %s (%s): %s", ghp.Name, ghp.Namespace, err)
+		return err
+	}
+
+	// need to specify types again until we resolve the mapping issue
+	ghp.TypeMeta = metav1.TypeMeta{
+		Kind:       "GitHubPolicy",
+		APIVersion: "hlnr.io/v1alpha1",
+	}
+
+	// update the status
+	if _, err := c.patcher.Apply(ghp); err != nil {
+		log.Printf("Error syncing GitHubPolicy %s (%s): %s", ghp.Name, ghp.Namespace, err)
+		return err
 	}
 
 	return nil
 }
 
-func syncRepository(cl getClient, ns string, repo v1alpha1.GitHubRepository) error {
-	authToken, err := getSecretAuthToken(cl, ns, repo.ConfigSecret.Name)
-	fmt.Println(string(authToken))
-	return err
+func cleanHooks(ghp *v1alpha1.GitHubPolicy) error {
+	return nil
 }
 
-func getSecretAuthToken(cl getClient, namespace, name string) ([]byte, error) {
+func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.GitHubPolicy) error {
+	authToken, err := getSecretAuthToken(cl, ghp.Namespace, repo.ConfigSecret.Name)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: authToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
+
+	ghHook, ok := ghp.Status.Hooks[repo.Slug()]
+	if ok {
+		// hooks are set, do an update
+		hook := &github.Hook{
+			Name:   k8sutils.PtrString("web"),
+			Active: k8sutils.PtrBool(true),
+			Events: []string{
+				"pull_request",
+				"release",
+			},
+			Config: map[string]interface{}{
+				"secret":       ghHook.Secret,
+				"url":          "http://localhost:4567/payload",
+				"content_type": "json",
+			},
+		}
+
+		hook, rsp, err := client.Repositories.EditHook(ctx, repo.Owner, repo.Name, ghHook.ID, hook)
+		if err != nil {
+			if rsp.StatusCode == http.StatusNotFound {
+				ghHook, err = createWebhook(ctx, client.Repositories, repo.Owner, repo.Name)
+				if err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		} else {
+			ghHook = v1alpha1.GitHubHook{
+				ID:     *hook.ID,
+				Secret: ghHook.Secret,
+			}
+		}
+	} else {
+		// hooks are not set, create them
+		ghHook, err = createWebhook(ctx, client.Repositories, repo.Owner, repo.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	if ghp.Status.Hooks == nil {
+		ghp.Status.Hooks = map[string]v1alpha1.GitHubHook{}
+	}
+
+	ghp.Status.Hooks[repo.Slug()] = ghHook
+	return nil
+}
+
+func createWebhook(ctx context.Context, cl webhookClient, owner, name string) (v1alpha1.GitHubHook, error) {
+	secret := k8sutils.RandomString(32)
+
+	hook := &github.Hook{
+		Name:   k8sutils.PtrString("web"),
+		Active: k8sutils.PtrBool(true),
+		Events: []string{
+			"pull_request",
+			"release",
+		},
+		Config: map[string]interface{}{
+			"secret":       secret,
+			"url":          "http://localhost:4567/payload",
+			"content_type": "json",
+		},
+	}
+
+	hook, _, err := cl.CreateHook(ctx, owner, name, hook)
+	if err != nil {
+		return v1alpha1.GitHubHook{}, err
+	}
+
+	return v1alpha1.GitHubHook{
+		ID:     *hook.ID,
+		Secret: secret,
+	}, nil
+}
+
+func getSecretAuthToken(cl getClient, namespace, name string) (string, error) {
 	configSecret := &v1.Secret{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
@@ -121,14 +236,14 @@ func getSecretAuthToken(cl getClient, namespace, name string) ([]byte, error) {
 	}
 
 	if err := cl.Get(configSecret, namespace, name); err != nil {
-		return nil, err
+		return "", err
 	}
 
-	data := configSecret.StringData
+	data := configSecret.Data
 	secret, ok := data["GITHUB_AUTH_TOKEN"]
 	if !ok {
-		return nil, fmt.Errorf("GITHUB_AUTH_TOKEN not found in '%s'", name)
+		return "", fmt.Errorf("GITHUB_AUTH_TOKEN not found in '%s'", name)
 	}
 
-	return base64.StdEncoding.DecodeString(secret)
+	return string(secret), nil
 }

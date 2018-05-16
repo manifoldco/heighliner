@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,9 +51,19 @@ type GitHubRepository struct {
 	ConfigSecret corev1.LocalObjectReference `json:"configSecret"`
 }
 
+// Slug returns the slug of the repository.
+func (r GitHubRepository) Slug() string {
+	return fmt.Sprintf("%s/%s", r.Owner, r.Name)
+}
+
 // GitHubPolicyStatus represents the current status for the GitHubPolicy.
 type GitHubPolicyStatus struct {
+	// Releases represents the available releases on GitHub for the associated
+	// repositories.
 	Releases map[string]GitHubRelease `json:"releases"`
+
+	// Hooks represents the installed hooks per repository.
+	Hooks map[string]GitHubHook `json:"hooks"`
 }
 
 // GitHubRelease represents a release made in GitHub
@@ -60,6 +72,12 @@ type GitHubRelease struct {
 	Tag        string      `json:"tag"`
 	Level      SemVerLevel `json:"level"`
 	ReleasedAt metav1.Time `json:"releasedAt"`
+}
+
+// GitHubHook represents a hook associated with a repository.
+type GitHubHook struct {
+	ID     int64  `json:"id"`
+	Secret string `json:"secret"` // TODO: we should store this in a k8s secret
 }
 
 // GitHubPolicyValidationSchema represents the OpenAPIV3Schema validation for
