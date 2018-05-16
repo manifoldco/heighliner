@@ -1,10 +1,9 @@
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/apis/core"
 )
 
 // ImagePolicy describes the configuration options for the ImagePolicy.
@@ -27,10 +26,10 @@ type ImagePolicyList struct {
 
 // ImagePolicySpec describes the specification for Image.
 type ImagePolicySpec struct {
-	Image            string                        `json:"image"`
-	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets"`
-	ImagePullPolicy  *corev1.PullPolicy            `json:"imagePullPolicy"`
-	VersioningPolicy core.LocalObjectReference     `json:"versioningPolicy"`
+	Image            string                    `json:"image"`
+	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets"`
+	ImagePullPolicy  *v1.PullPolicy            `json:"imagePullPolicy"`
+	VersioningPolicy v1.LocalObjectReference   `json:"versioningPolicy"`
 }
 
 // ImagePolicyStatus represents the latest version of the ImagePolicy that
