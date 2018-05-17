@@ -56,10 +56,56 @@ spec:
           - github-policy-controller
           env:
             - name: DOMAIN
-              value: github-controller.arigato.tools
+              value: f22d1449.ngrok.io
             - name: INSECURE_SSL
               value: "true"
           resources:
             requests:
               cpu: 100m
               memory: 10Mi
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: github-policy-controller
+  name: github-policy-controller
+  namespace: hlnr-system
+spec:
+  type: NodePort
+  ports:
+  - name: headless
+    port: 80
+    targetPort: 8080
+  selector:
+    app: github-policy-controller
+status:
+  loadBalancer: {}
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: github-policy-controller
+  namespace: hlnr-system
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: f22d1449.ngrok.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: github-policy-controller
+          servicePort: 80
+  - host: github-policy-controller.arigato.tools
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: github-policy-controller
+          servicePort: 80

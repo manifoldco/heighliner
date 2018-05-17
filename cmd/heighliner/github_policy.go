@@ -20,9 +20,10 @@ var (
 	}
 
 	ghpcFlags struct {
-		Namespace   string `long:"namespace" env:"NAMESPACE" description:"The namespace we'll watch for CRDs. By default we'll watch all namespaces."`
-		Domain      string `long:"domain" env:"DOMAIN" description:"The domain name used for callbacks" required:"true"`
-		InsecureSSL bool   `long:"insecure-ssl" env:"INSECURE_SSL" description:"Allow insecure callbacks to the webhook"`
+		Namespace    string `long:"namespace" env:"NAMESPACE" description:"The namespace we'll watch for CRDs. By default we'll watch all namespaces."`
+		Domain       string `long:"domain" env:"DOMAIN" description:"The domain name used for callbacks" required:"true"`
+		InsecureSSL  bool   `long:"insecure-ssl" env:"INSECURE_SSL" description:"Allow insecure callbacks to the webhook"`
+		CallbackPort string `long:"callback-port" env:"CALLBACK_PORT" description:"The port to run the callbacks server on" default:":8080"`
 	}
 )
 
@@ -32,7 +33,7 @@ func ghpcCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	cfg, cs, acs, err := kubekit.InClusterClientsets()
+	rcfg, cs, acs, err := kubekit.InClusterClientsets()
 	if err != nil {
 		log.Printf("Could not get Clientset: %s\n", err)
 		return err
@@ -43,7 +44,13 @@ func ghpcCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctrl, err := githubpolicy.NewController(cfg, cs, ghpcFlags.Namespace, ghpcFlags.Domain, ghpcFlags.InsecureSSL)
+	cfg := githubpolicy.Config{
+		Domain:       ghpcFlags.Domain,
+		InsecureSSL:  ghpcFlags.InsecureSSL,
+		CallbackPort: ghpcFlags.CallbackPort,
+	}
+
+	ctrl, err := githubpolicy.NewController(rcfg, cs, ghpcFlags.Namespace, cfg)
 	if err != nil {
 		log.Printf("Could not create controller: %s\n", err)
 		return err

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/google/go-github/github"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
@@ -24,42 +25,32 @@ import (
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
+func init() {
+	// let's not hit rate limits
+	kubekit.ResyncPeriod = 30 * time.Second
+}
+
 // Controller will take care of syncing the internal status of the GitHub Policy
 // object with the available releases on GitHub.
 type Controller struct {
 	rc        *rest.RESTClient
 	cs        kubernetes.Interface
-	patcher   *patcher.Patcher
+	patcher   patchClient
 	namespace string
-	domain    string
-	insecure  bool
-}
+	cfg       Config
 
-type getClient interface {
-	Get(interface{}, string, string) error
+	// we'll be sharing data between several goroutines - the controller and
+	// callback server. This channel is to share information between the two.
+	hooksChan chan callbackHook
 }
 
 type webhookClient interface {
 	CreateHook(context.Context, string, string, *github.Hook) (*github.Hook, *github.Response, error)
 }
 
-type ghConfig struct {
-	insecure bool
-	domain   string
-}
-
-func (c ghConfig) URL() string {
-	scheme := "https://"
-	if c.insecure {
-		scheme = "http://"
-	}
-
-	return fmt.Sprintf("%s%s/payload", scheme, c.domain)
-}
-
 // NewController returns a new GitHubPolicy Controller.
-func NewController(cfg *rest.Config, cs kubernetes.Interface, namespace, domain string, insecure bool) (*Controller, error) {
-	rc, err := kubekit.RESTClient(cfg, &v1alpha1.SchemeGroupVersion, v1alpha1.AddToScheme)
+func NewController(rcfg *rest.Config, cs kubernetes.Interface, namespace string, cfg Config) (*Controller, error) {
+	rc, err := kubekit.RESTClient(rcfg, &v1alpha1.SchemeGroupVersion, v1alpha1.AddToScheme)
 	if err != nil {
 		return nil, err
 	}
@@ -69,16 +60,24 @@ func NewController(cfg *rest.Config, cs kubernetes.Interface, namespace, domain 
 		rc:        rc,
 		patcher:   patcher.New("hlnr-github-policy", cmdutil.NewFactory(nil)),
 		namespace: namespace,
-		domain:    domain,
-		insecure:  insecure,
+		cfg:       cfg,
+		hooksChan: make(chan callbackHook),
 	}, nil
 }
 
 // Run runs the Controller in the background and sets up watchers to take action
 // when the desired state is altered.
 func (c *Controller) Run() error {
-	log.Printf("Starting controller...")
 	ctx, cancel := context.WithCancel(context.Background())
+
+	log.Printf("Starting WebHooks server...")
+	srv := &callbackServer{
+		patcher:   c.patcher,
+		hooksChan: c.hooksChan,
+	}
+	go srv.start(c.cfg.CallbackPort)
+
+	log.Printf("Starting controller...")
 
 	go c.run(ctx)
 
@@ -88,6 +87,11 @@ func (c *Controller) Run() error {
 	<-quit
 	log.Printf("Shutdown requested...")
 	cancel()
+
+	log.Printf("Shutting down WebHooks server...")
+	if err := srv.stop(ctx); err != nil {
+		log.Printf("Error shutting down WebHooks server: %s", err)
+	}
 
 	<-ctx.Done()
 	log.Printf("Shutting down...")
@@ -105,7 +109,9 @@ func (c *Controller) run(ctx context.Context) {
 				c.syncPolicy(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
-				c.syncPolicy(new)
+				if ok, err := k8sutils.SpecChanges(old, new); ok && err == nil {
+					c.syncPolicy(new)
+				}
 			},
 			DeleteFunc: func(obj interface{}) {
 				cp := obj.(*v1alpha1.GitHubPolicy).DeepCopy()
@@ -120,13 +126,8 @@ func (c *Controller) run(ctx context.Context) {
 func (c *Controller) syncPolicy(obj interface{}) error {
 	ghp := obj.(*v1alpha1.GitHubPolicy).DeepCopy()
 
-	cfg := ghConfig{
-		insecure: c.insecure,
-		domain:   c.domain,
-	}
-
 	for _, repo := range ghp.Spec.Repositories {
-		if err := ensureHooks(c.patcher, repo, ghp, cfg); err != nil {
+		if err := ensureHooks(c.patcher, repo, ghp, c.cfg); err != nil {
 			log.Printf("Could not ensure GitHub hooks for %s (%s): %s", repo.Slug(), ghp.Namespace, err)
 			continue
 		}
@@ -193,7 +194,7 @@ func cleanStatus(ghp *v1alpha1.GitHubPolicy) error {
 	return nil
 }
 
-func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.GitHubPolicy, cfg ghConfig) error {
+func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.GitHubPolicy, cfg Config) error {
 	authToken, err := getSecretAuthToken(cl, ghp.Namespace, repo.ConfigSecret.Name)
 	if err != nil {
 		return err
@@ -219,15 +220,15 @@ func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.Git
 			},
 			Config: map[string]interface{}{
 				"secret":       ghHook.Secret,
-				"url":          cfg.URL(),
+				"url":          cfg.PayloadURL(repo.Owner, repo.Name),
 				"content_type": "json",
-				"insecure_ssl": cfg.insecure,
+				"insecure_ssl": cfg.InsecureSSL,
 			},
 		}
 
 		hook, rsp, err := client.Repositories.EditHook(ctx, repo.Owner, repo.Name, ghHook.ID, hook)
 		if err != nil {
-			if rsp.StatusCode == http.StatusNotFound {
+			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 				ghHook, err = createWebhook(ctx, client.Repositories, repo.Owner, repo.Name, cfg)
 				if err != nil {
 					return err
@@ -257,7 +258,7 @@ func ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.Git
 	return nil
 }
 
-func createWebhook(ctx context.Context, cl webhookClient, owner, name string, cfg ghConfig) (v1alpha1.GitHubHook, error) {
+func createWebhook(ctx context.Context, cl webhookClient, owner, name string, cfg Config) (v1alpha1.GitHubHook, error) {
 	secret := k8sutils.RandomString(32)
 
 	hook := &github.Hook{
@@ -269,9 +270,9 @@ func createWebhook(ctx context.Context, cl webhookClient, owner, name string, cf
 		},
 		Config: map[string]interface{}{
 			"secret":       secret,
-			"url":          cfg.URL(),
+			"url":          cfg.PayloadURL(owner, name),
 			"content_type": "json",
-			"insecure_ssl": cfg.insecure,
+			"insecure_ssl": cfg.InsecureSSL,
 		},
 	}
 
@@ -305,4 +306,27 @@ func getSecretAuthToken(cl getClient, namespace, name string) (string, error) {
 	}
 
 	return string(secret), nil
+}
+
+func (c *Controller) storeHook(crd *v1alpha1.GitHubPolicy, repositorySlug string, hook v1alpha1.GitHubHook) {
+	cbh := callbackHook{
+		crdName:      crd.Name,
+		crdNamespace: crd.Namespace,
+		repo:         repositorySlug,
+		hook:         hook,
+	}
+
+	c.hooksChan <- cbh
+}
+
+func (c *Controller) deleteHook(crd *v1alpha1.GitHubPolicy, repositorySlug string, hook v1alpha1.GitHubHook) {
+	cbh := callbackHook{
+		crdName:      crd.Name,
+		crdNamespace: crd.Namespace,
+		repo:         repositorySlug,
+		hook:         hook,
+		delete:       true,
+	}
+
+	c.hooksChan <- cbh
 }
