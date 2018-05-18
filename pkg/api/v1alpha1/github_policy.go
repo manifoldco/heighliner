@@ -78,6 +78,8 @@ type GitHubRelease struct {
 type GitHubHook struct {
 	ID     int64  `json:"id"`
 	Secret string `json:"secret"` // TODO: we should store this in a k8s secret
+	Owner  string `json:"owner"`
+	Repo   string `json:"repo"`
 }
 
 // GitHubPolicyValidationSchema represents the OpenAPIV3Schema validation for

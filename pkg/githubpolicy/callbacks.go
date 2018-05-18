@@ -121,6 +121,7 @@ func (s *callbackServer) hookForRepo(owner, name string) (callbackHook, bool) {
 }
 
 func (s *callbackServer) storeHooks() {
+	log.Println("Starting hooks check")
 	for hook := range s.hooksChan {
 		if i, ok := s.isHookPresent(hook); ok {
 			if hook.delete {
