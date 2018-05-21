@@ -49,6 +49,8 @@ type webhookClient interface {
 	CreateHook(context.Context, string, string, *github.Hook) (*github.Hook, *github.Response, error)
 }
 
+const authTokenKey = "GITHUB_AUTH_TOKEN"
+
 // NewController returns a new GitHubPolicy Controller.
 func NewController(rcfg *rest.Config, cs kubernetes.Interface, namespace string, cfg Config) (*Controller, error) {
 	rc, err := kubekit.RESTClient(rcfg, &v1alpha1.SchemeGroupVersion, v1alpha1.AddToScheme)
@@ -391,9 +393,9 @@ func getSecretAuthToken(cl getClient, namespace, name string) (string, error) {
 	}
 
 	data := configSecret.Data
-	secret, ok := data["GITHUB_AUTH_TOKEN"]
+	secret, ok := data[authTokenKey]
 	if !ok {
-		return "", fmt.Errorf("GITHUB_AUTH_TOKEN not found in '%s'", name)
+		return "", fmt.Errorf("%s not found in '%s'", authTokenKey, name)
 	}
 
 	return string(secret), nil
