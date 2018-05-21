@@ -6,16 +6,16 @@ import (
 
 	"github.com/jelmersnoeck/kubekit"
 	flags "github.com/jessevdk/go-flags"
-	"github.com/manifoldco/heighliner/pkg/githubpolicy"
+	"github.com/manifoldco/heighliner/pkg/githubrepository"
 
 	"github.com/spf13/cobra"
 )
 
 var (
 	ghpcCmd = &cobra.Command{
-		Use:     "github-policy-controller",
-		Aliases: []string{"ghpc"},
-		Short:   "Run the GitHubPolicy Controller",
+		Use:     "github-repository-controller",
+		Aliases: []string{"ghrc"},
+		Short:   "Run the GitHub Repository Controller",
 		RunE:    ghpcCommand,
 	}
 
@@ -39,18 +39,18 @@ func ghpcCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := kubekit.CreateCRD(acs, githubpolicy.GitHubPolicyResource); err != nil {
-		log.Printf("Could not create GitHubPolicy CRD: %s\n", err)
+	if err := kubekit.CreateCRD(acs, githubrepository.GitHubRepositoryResource); err != nil {
+		log.Printf("Could not create GitHubRepository CRD: %s\n", err)
 		return err
 	}
 
-	cfg := githubpolicy.Config{
+	cfg := githubrepository.Config{
 		Domain:       ghpcFlags.Domain,
 		InsecureSSL:  ghpcFlags.InsecureSSL,
 		CallbackPort: ghpcFlags.CallbackPort,
 	}
 
-	ctrl, err := githubpolicy.NewController(rcfg, cs, ghpcFlags.Namespace, cfg)
+	ctrl, err := githubrepository.NewController(rcfg, cs, ghpcFlags.Namespace, cfg)
 	if err != nil {
 		log.Printf("Could not create controller: %s\n", err)
 		return err

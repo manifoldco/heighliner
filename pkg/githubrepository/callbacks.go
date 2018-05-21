@@ -1,4 +1,4 @@
-package githubpolicy
+package githubrepository
 
 import (
 	"context"
@@ -56,7 +56,7 @@ type callbackHook struct {
 	crdName      string
 	crdNamespace string
 	repo         string
-	hook         v1alpha1.GitHubHook
+	hook         *v1alpha1.GitHubHook
 
 	// delete is used to remove the callbackHook from the callbackServer
 	delete bool
@@ -103,8 +103,8 @@ func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *callbackServer) hookForRepo(owner, name string) (callbackHook, bool) {
-	repo := v1alpha1.GitHubRepository{
-		Name:  name,
+	repo := v1alpha1.GitHubRepositorySpec{
+		Repo:  name,
 		Owner: owner,
 	}
 	slug := repo.Slug()

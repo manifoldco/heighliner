@@ -1,13 +1,12 @@
 apiVersion: hlnr.io/v1alpha1
-kind: GitHubPolicy
+kind: GitHubRepository
 metadata:
   name: heighliner-www
   namespace: websites
 spec:
   maxAvailable: 1
-  repositories:
-  - name: heighliner-www
-    owner: manifoldco
-    configSecret:
-      name: manifold-github
+  repo: heighliner-www
+  owner: manifoldco
+  configSecret:
+    name: manifold-github
 status: {}

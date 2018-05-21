@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRole
 metadata:
-  name: heighliner:github-policy
+  name: heighliner:github-repository
 rules:
   - apiGroups: ["hlnr.io"]
     resources: ["githubpolicies"]
@@ -15,13 +15,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1beta1
 kind: ClusterRoleBinding
 metadata:
-  name: heighliner:github-policy
+  name: heighliner:github-repository
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: heighliner:github-policy
+  name: heighliner:github-repository
 subjects:
-  - name: heighliner-github-policy
+  - name: heighliner-github-repository
     namespace: hlnr-system
     kind: ServiceAccount
 
@@ -30,7 +30,7 @@ subjects:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: heighliner-github-policy
+  name: heighliner-github-repository
   namespace: hlnr-system
 
 ---
@@ -38,22 +38,22 @@ metadata:
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: github-policy-controller
+  name: github-repository-controller
   namespace: hlnr-system
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: github-policy-controller
+        app: github-repository-controller
     spec:
-      serviceAccountName: heighliner-github-policy
+      serviceAccountName: heighliner-github-repository
       containers:
-        - name: github-policy-controller
+        - name: github-repository-controller
           image: arigato/heighliner:latest
           imagePullPolicy: Never
           args:
-          - github-policy-controller
+          - github-repository-controller
           env:
             - name: DOMAIN
               value: f22d1449.ngrok.io
@@ -70,8 +70,8 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    service: github-policy-controller
-  name: github-policy-controller
+    service: github-repository-controller
+  name: github-repository-controller
   namespace: hlnr-system
 spec:
   type: NodePort
@@ -80,7 +80,7 @@ spec:
     port: 80
     targetPort: 8080
   selector:
-    app: github-policy-controller
+    app: github-repository-controller
 status:
   loadBalancer: {}
 
@@ -89,7 +89,7 @@ status:
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
-  name: github-policy-controller
+  name: github-repository-controller
   namespace: hlnr-system
   annotations:
     kubernetes.io/ingress.class: "nginx"
@@ -100,12 +100,12 @@ spec:
       paths:
       - path: /
         backend:
-          serviceName: github-policy-controller
+          serviceName: github-repository-controller
           servicePort: 80
-  - host: github-policy-controller.arigato.tools
+  - host: github-repository-controller.arigato.tools
     http:
       paths:
       - path: /
         backend:
-          serviceName: github-policy-controller
+          serviceName: github-repository-controller
           servicePort: 80

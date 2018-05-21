@@ -1,8 +1,7 @@
-package githubpolicy
+package githubrepository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -51,7 +50,7 @@ type webhookClient interface {
 
 const authTokenKey = "GITHUB_AUTH_TOKEN"
 
-// NewController returns a new GitHubPolicy Controller.
+// NewController returns a new GitHubRepository Controller.
 func NewController(rcfg *rest.Config, cs kubernetes.Interface, namespace string, cfg Config) (*Controller, error) {
 	rc, err := kubekit.RESTClient(rcfg, &v1alpha1.SchemeGroupVersion, v1alpha1.AddToScheme)
 	if err != nil {
@@ -106,19 +105,19 @@ func (c *Controller) run(ctx context.Context) {
 	watcher := kubekit.NewWatcher(
 		c.rc,
 		c.namespace,
-		&GitHubPolicyResource,
+		&GitHubRepositoryResource,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				c.syncPolicy(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
-				if ok, err := k8sutils.SpecChanges(old, new); ok && err == nil {
+				if ok, err := k8sutils.ShouldSync(old, new); ok && err == nil {
 					c.syncPolicy(new)
 				}
 			},
 			DeleteFunc: func(obj interface{}) {
-				cp := obj.(*v1alpha1.GitHubPolicy).DeepCopy()
-				log.Printf("Deleting GitHubPolicy %s", cp.Name)
+				cp := obj.(*v1alpha1.GitHubRepository).DeepCopy()
+				log.Printf("Deleting GitHubRepository %s", cp.Name)
 				c.deleteHooks(obj)
 			},
 		},
@@ -128,134 +127,79 @@ func (c *Controller) run(ctx context.Context) {
 }
 
 func (c *Controller) deleteHooks(obj interface{}) error {
-	ghp := obj.(*v1alpha1.GitHubPolicy).DeepCopy()
+	ghp := obj.(*v1alpha1.GitHubRepository).DeepCopy()
 
-	for _, hook := range ghp.Status.Hooks {
-		ctx := context.Background()
-
-		repo, err := hookRepository(hook, ghp.Spec.Repositories)
-		if err != nil {
-			log.Printf("Could not get hook for repository %s (%s): %s", ghp.Name, ghp.Namespace, err)
-			continue
-		}
-
-		authToken, err := getSecretAuthToken(c.patcher, ghp.Namespace, repo.ConfigSecret.Name)
-		if err != nil {
-			log.Printf("Could not get authToken for repository %s (%s): %s", ghp.Name, ghp.Namespace, err)
-			continue
-		}
-
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: authToken},
-		)
-		tc := oauth2.NewClient(ctx, ts)
-		client := github.NewClient(tc)
-
-		if _, err := client.Repositories.DeleteHook(ctx, hook.Owner, hook.Repo, hook.ID); err != nil {
-			log.Printf("Could not delete hook from GitHub for %s (%s): %s", ghp.Name, ghp.Namespace, err)
-			continue
-		}
-
-		wcfg := webhookConfig{
-			repo:      repo.Name,
-			owner:     repo.Owner,
-			slug:      repo.Slug(),
-			name:      ghp.Name,
-			namespace: ghp.Namespace,
-		}
-
-		// delete the webhook from the callback server
-		c.propagateHook(wcfg, hook, true)
+	if ghp.Status.Webhook == nil {
+		return nil
 	}
+
+	repo := ghp.Spec
+	ctx := context.Background()
+
+	authToken, err := getSecretAuthToken(c.patcher, ghp.Namespace, repo.ConfigSecret.Name)
+	if err != nil {
+		log.Printf("Could not get authToken for repository %s (%s): %s", ghp.Name, ghp.Namespace, err)
+		return err
+	}
+
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: authToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	client := github.NewClient(tc)
+
+	if _, err := client.Repositories.DeleteHook(ctx, repo.Owner, repo.Repo, *ghp.Status.Webhook.ID); err != nil {
+		log.Printf("Could not delete hook from GitHub for %s (%s): %s", ghp.Name, ghp.Namespace, err)
+		return err
+	}
+
+	wcfg := webhookConfig{
+		repo:      repo.Repo,
+		owner:     repo.Owner,
+		slug:      repo.Slug(),
+		name:      ghp.Name,
+		namespace: ghp.Namespace,
+	}
+
+	// delete the webhook from the callback server
+	c.propagateHook(wcfg, ghp.Status.Webhook, true)
 
 	return nil
 }
 
-func hookRepository(hook v1alpha1.GitHubHook, repos []v1alpha1.GitHubRepository) (v1alpha1.GitHubRepository, error) {
-	for _, repo := range repos {
-		if repo.Name == hook.Repo && repo.Owner == hook.Owner {
-			return repo, nil
-		}
-	}
-
-	return v1alpha1.GitHubRepository{}, errors.New("GitHubRepository not found")
-}
-
 func (c *Controller) syncPolicy(obj interface{}) error {
-	ghp := obj.(*v1alpha1.GitHubPolicy).DeepCopy()
+	ghp := obj.(*v1alpha1.GitHubRepository).DeepCopy()
 
-	for _, repo := range ghp.Spec.Repositories {
-		if err := c.ensureHooks(c.patcher, repo, ghp, c.cfg); err != nil {
-			log.Printf("Could not ensure GitHub hooks for %s (%s): %s", repo.Slug(), ghp.Namespace, err)
-			continue
-		}
-	}
-
-	// remove the hooks that are not needed anymore
-	if err := cleanStatus(ghp); err != nil {
-		log.Printf("Error cleaning up status for %s (%s): %s", ghp.Name, ghp.Namespace, err)
+	hook, err := c.ensureHooks(c.patcher, ghp, c.cfg)
+	if err != nil {
+		log.Printf("Could not ensure GitHub hooks for %s (%s): %s", ghp.Spec.Slug(), ghp.Namespace, err)
 		return err
 	}
 
 	// need to specify types again until we resolve the mapping issue
 	ghp.TypeMeta = metav1.TypeMeta{
-		Kind:       "GitHubPolicy",
+		Kind:       "GitHubRepository",
 		APIVersion: "hlnr.io/v1alpha1",
+	}
+
+	ghp.Status.Webhook = &v1alpha1.GitHubHook{
+		ID:     hook.ID,
+		Secret: hook.Secret,
 	}
 
 	// update the status
 	if _, err := c.patcher.Apply(ghp); err != nil {
-		log.Printf("Error syncing GitHubPolicy %s (%s): %s", ghp.Name, ghp.Namespace, err)
+		log.Printf("Error syncing GitHubRepository %s (%s): %s", ghp.Name, ghp.Namespace, err)
 		return err
 	}
 
 	return nil
 }
 
-func cleanStatus(ghp *v1alpha1.GitHubPolicy) error {
-	for slug := range ghp.Status.Hooks {
-		found := false
-		for _, repo := range ghp.Spec.Repositories {
-			if slug == repo.Slug() {
-				found = true
-				break
-			}
-		}
-
-		if found {
-			continue
-		}
-
-		// TODO(jelmer): ideally we'd try and deregister the hook as well, but
-		// we need to match this up with the "old" version of the repository.
-		delete(ghp.Status.Hooks, slug)
-	}
-
-	for slug := range ghp.Status.Releases {
-		found := false
-		for _, repo := range ghp.Spec.Repositories {
-			if slug == repo.Slug() {
-				found = true
-				break
-			}
-		}
-
-		if found {
-			continue
-		}
-
-		// TODO(jelmer): ideally we'd try and deregister the hook as well, but
-		// we need to match this up with the "old" version of the repository.
-		delete(ghp.Status.Releases, slug)
-	}
-
-	return nil
-}
-
-func (c *Controller) ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, ghp *v1alpha1.GitHubPolicy, cfg Config) error {
-	authToken, err := getSecretAuthToken(cl, ghp.Namespace, repo.ConfigSecret.Name)
+func (c *Controller) ensureHooks(cl getClient, ghp *v1alpha1.GitHubRepository, cfg Config) (*v1alpha1.GitHubHook, error) {
+	authToken, err := getSecretAuthToken(cl, ghp.Namespace, ghp.Spec.ConfigSecret.Name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ctx := context.Background()
@@ -266,36 +210,34 @@ func (c *Controller) ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, g
 	tc := oauth2.NewClient(ctx, ts)
 	client := github.NewClient(tc)
 
-	ghHook, ok := ghp.Status.Hooks[repo.Slug()]
-
+	repo := ghp.Spec
 	wcfg := webhookConfig{
 		name:        ghp.Name,
 		namespace:   ghp.Namespace,
-		payloadURL:  cfg.PayloadURL(repo.Owner, repo.Name),
+		payloadURL:  cfg.PayloadURL(repo.Owner, repo.Repo),
 		insecureSSL: cfg.InsecureSSL,
 		owner:       repo.Owner,
-		repo:        repo.Name,
+		repo:        repo.Repo,
 		slug:        repo.Slug(),
 	}
 
-	if ok {
+	ghHook := ghp.Status.Webhook
+	if ghp.Status.Webhook != nil {
 		// hooks are set, do an update
 		hook := newGHHook(wcfg, ghHook.Secret)
-		hook, rsp, err := client.Repositories.EditHook(ctx, repo.Owner, repo.Name, ghHook.ID, hook)
+		hook, rsp, err := client.Repositories.EditHook(ctx, repo.Owner, repo.Repo, *ghHook.ID, hook)
 		if err != nil {
 			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 				ghHook, err = c.createWebhook(ctx, client.Repositories, wcfg)
 				if err != nil {
-					return err
+					return nil, err
 				}
 			} else {
-				return err
+				return nil, err
 			}
 		} else {
-			ghHook = v1alpha1.GitHubHook{
-				Owner:  repo.Owner,
-				Repo:   repo.Name,
-				ID:     *hook.ID,
+			ghHook = &v1alpha1.GitHubHook{
+				ID:     hook.ID,
 				Secret: ghHook.Secret,
 			}
 
@@ -305,31 +247,24 @@ func (c *Controller) ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, g
 		// hooks are not set, create them
 		ghHook, err = c.createWebhook(ctx, client.Repositories, wcfg)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	if ghp.Status.Hooks == nil {
-		ghp.Status.Hooks = map[string]v1alpha1.GitHubHook{}
-	}
-
-	ghp.Status.Hooks[repo.Slug()] = ghHook
-	return nil
+	return ghHook, nil
 }
 
-func (c *Controller) createWebhook(ctx context.Context, cl webhookClient, cfg webhookConfig) (v1alpha1.GitHubHook, error) {
+func (c *Controller) createWebhook(ctx context.Context, cl webhookClient, cfg webhookConfig) (*v1alpha1.GitHubHook, error) {
 	secret := k8sutils.RandomString(32)
 
 	hook := newGHHook(cfg, secret)
 	hook, _, err := cl.CreateHook(ctx, cfg.owner, cfg.repo, hook)
 	if err != nil {
-		return v1alpha1.GitHubHook{}, err
+		return nil, err
 	}
 
-	ghHook := v1alpha1.GitHubHook{
-		Repo:   cfg.repo,
-		Owner:  cfg.owner,
-		ID:     *hook.ID,
+	ghHook := &v1alpha1.GitHubHook{
+		ID:     hook.ID,
 		Secret: secret,
 	}
 
@@ -340,7 +275,7 @@ func (c *Controller) createWebhook(ctx context.Context, cl webhookClient, cfg we
 }
 
 func newGHHook(cfg webhookConfig, secret string) *github.Hook {
-	hook := &github.Hook{
+	return &github.Hook{
 		Name:   k8sutils.PtrString("web"),
 		Active: k8sutils.PtrBool(true),
 		Events: []string{
@@ -390,7 +325,7 @@ func getSecretAuthToken(cl getClient, namespace, name string) (string, error) {
 	return string(secret), nil
 }
 
-func (c *Controller) propagateHook(cfg webhookConfig, hook v1alpha1.GitHubHook, delete bool) {
+func (c *Controller) propagateHook(cfg webhookConfig, hook *v1alpha1.GitHubHook, delete bool) {
 	cbh := callbackHook{
 		crdName:      cfg.name,
 		crdNamespace: cfg.namespace,

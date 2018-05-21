@@ -1,4 +1,4 @@
-package githubpolicy
+package githubrepository
 
 import "fmt"
 

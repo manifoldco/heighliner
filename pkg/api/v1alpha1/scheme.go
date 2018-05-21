@@ -46,8 +46,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ConfigPolicyList{},
 		&SecurityPolicy{},
 		&SecurityPolicyList{},
-		&GitHubPolicy{},
-		&GitHubPolicyList{},
+		&GitHubRepository{},
+		&GitHubRepositoryList{},
 	)
 
 	v1.AddToGroupVersion(scheme, v1alpha1.SchemeGroupVersion)
