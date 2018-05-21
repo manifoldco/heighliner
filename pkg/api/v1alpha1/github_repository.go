@@ -54,8 +54,10 @@ func (r *GitHubRepositorySpec) Slug() string {
 type GitHubRepositoryStatus struct {
 	// Releases represents the available releases on GitHub for the associated
 	// repositories.
-	Releases map[string]GitHubRelease `json:"releases"`
+	Releases map[SemVerLevel][]GitHubRelease `json:"releases"`
 
+	// Webhook represents the installed Webhook information for the GitHub
+	// Repository.
 	Webhook *GitHubHook `json:"webhook"`
 }
 

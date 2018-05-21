@@ -2,7 +2,6 @@ package githubrepository
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -99,7 +98,40 @@ func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	fmt.Println(string(payload))
+	var release *v1alpha1.GitHubRelease
+	switch r.Header.Get("X-GitHub-Event") {
+	case "ping":
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK!"))
+		return
+	case "pull_request":
+		release, err = getPullRequestRelease(payload)
+	case "release":
+		release, err = getOfficialRelease(payload)
+	}
+
+	if err := s.storeRelease(release.Level, release); err != nil {
+		log.Printf("Could not store release: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK!"))
+	return
+}
+
+func getPullRequestRelease(payload []byte) (*v1alpha1.GitHubRelease, error) {
+	return nil, nil
+}
+
+func getOfficialRelease(r *http.Request) (*v1alpha1.GitHubRelease, error) {
+	return nil, nil
+}
+
+func (s *callbackServer) storeRelease(level v1alpha1.SemVerLevel, release *v1alpha1.GitHubRelease) error {
+	return nil
 }
 
 func (s *callbackServer) hookForRepo(owner, name string) (callbackHook, bool) {
