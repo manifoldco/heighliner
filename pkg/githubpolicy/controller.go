@@ -280,21 +280,7 @@ func (c *Controller) ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, g
 
 	if ok {
 		// hooks are set, do an update
-		hook := &github.Hook{
-			Name:   k8sutils.PtrString("web"),
-			Active: k8sutils.PtrBool(true),
-			Events: []string{
-				"pull_request",
-				"release",
-			},
-			Config: map[string]interface{}{
-				"secret":       ghHook.Secret,
-				"url":          wcfg.payloadURL,
-				"content_type": "json",
-				"insecure_ssl": wcfg.insecureSSL,
-			},
-		}
-
+		hook := newGHHook(wcfg, ghHook.Secret)
 		hook, rsp, err := client.Repositories.EditHook(ctx, repo.Owner, repo.Name, ghHook.ID, hook)
 		if err != nil {
 			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
@@ -334,21 +320,7 @@ func (c *Controller) ensureHooks(cl getClient, repo v1alpha1.GitHubRepository, g
 func (c *Controller) createWebhook(ctx context.Context, cl webhookClient, cfg webhookConfig) (v1alpha1.GitHubHook, error) {
 	secret := k8sutils.RandomString(32)
 
-	hook := &github.Hook{
-		Name:   k8sutils.PtrString("web"),
-		Active: k8sutils.PtrBool(true),
-		Events: []string{
-			"pull_request",
-			"release",
-		},
-		Config: map[string]interface{}{
-			"secret":       secret,
-			"url":          cfg.payloadURL,
-			"content_type": "json",
-			"insecure_ssl": cfg.insecureSSL,
-		},
-	}
-
+	hook := newGHHook(cfg, secret)
 	hook, _, err := cl.CreateHook(ctx, cfg.owner, cfg.repo, hook)
 	if err != nil {
 		return v1alpha1.GitHubHook{}, err
@@ -365,6 +337,23 @@ func (c *Controller) createWebhook(ctx context.Context, cl webhookClient, cfg we
 	c.propagateHook(cfg, ghHook, false)
 
 	return ghHook, nil
+}
+
+func newGHHook(cfg webhookConfig, secret string) *github.Hook {
+	hook := &github.Hook{
+		Name:   k8sutils.PtrString("web"),
+		Active: k8sutils.PtrBool(true),
+		Events: []string{
+			"pull_request",
+			"release",
+		},
+		Config: map[string]interface{}{
+			"secret":       secret,
+			"url":          cfg.payloadURL,
+			"content_type": "json",
+			"insecure_ssl": cfg.insecureSSL,
+		},
+	}
 }
 
 type webhookConfig struct {
