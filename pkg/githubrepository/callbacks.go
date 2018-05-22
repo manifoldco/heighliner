@@ -2,6 +2,7 @@ package githubrepository
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"sync"
@@ -11,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jelmersnoeck/kubekit/patcher"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -110,7 +112,7 @@ func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) 
 		release, err = getOfficialRelease(payload)
 	}
 
-	if err := s.storeRelease(release.Level, release); err != nil {
+	if err := s.storeRelease(release); err != nil {
 		log.Printf("Could not store release: %s", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
@@ -122,15 +124,11 @@ func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) 
 	return
 }
 
-func getPullRequestRelease(payload []byte) (*v1alpha1.GitHubRelease, error) {
-	return nil, nil
-}
+func (s *callbackServer) storeRelease(release *v1alpha1.GitHubRelease) error {
+	if release == nil {
+		return nil
+	}
 
-func getOfficialRelease(r *http.Request) (*v1alpha1.GitHubRelease, error) {
-	return nil, nil
-}
-
-func (s *callbackServer) storeRelease(level v1alpha1.SemVerLevel, release *v1alpha1.GitHubRelease) error {
 	return nil
 }
 
@@ -185,4 +183,50 @@ func (s *callbackServer) isHookPresent(cbh callbackHook) (int, bool) {
 	}
 
 	return 0, false
+}
+
+func getPullRequestRelease(payload []byte) (*v1alpha1.GitHubRelease, error) {
+	pre := &github.PullRequestEvent{}
+	if err := json.Unmarshal(payload, pre); err != nil {
+		return nil, err
+	}
+
+	return &v1alpha1.GitHubRelease{
+		Name:       *pre.PullRequest.Head.Ref,
+		Tag:        *pre.PullRequest.Head.SHA,
+		Level:      v1alpha1.SemVerLevelPreview,
+		ReleasedAt: releasedAtFromGitHubTimestamp(pre.PullRequest.Head.Repo.UpdatedAt),
+	}, nil
+}
+
+func getOfficialRelease(payload []byte) (*v1alpha1.GitHubRelease, error) {
+	re := &github.ReleaseEvent{}
+	if err := json.Unmarshal(payload, re); err != nil {
+		return nil, err
+	}
+
+	if *re.Release.Draft {
+		return nil, nil
+	}
+
+	lvl := v1alpha1.SemVerLevelRelease
+	if re.Release.Prerelease != nil && *re.Release.Prerelease {
+		lvl = v1alpha1.SemVerLevelReleaseCandidate
+	}
+
+	name := *re.Release.TagName
+	if re.Release.Name != nil {
+		name = *re.Release.Name
+	}
+
+	return &v1alpha1.GitHubRelease{
+		Name:       name,
+		Tag:        *re.Release.TagName,
+		Level:      lvl,
+		ReleasedAt: releasedAtFromGitHubTimestamp(re.Release.PublishedAt),
+	}, nil
+}
+
+func releasedAtFromGitHubTimestamp(ts *github.Timestamp) metav1.Time {
+	return metav1.NewTime(ts.Time)
 }
