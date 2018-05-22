@@ -4,14 +4,74 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jelmersnoeck/kubekit/patcher"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
+type mockPatcher struct {
+	getFn   func(interface{}, string, string) error
+	applyFn func(runtime.Object, ...patcher.OptionFunc) ([]byte, error)
+}
+
+func (m *mockPatcher) Get(i interface{}, ns, name string) error { return m.getFn(i, ns, name) }
+func (m *mockPatcher) Apply(obj runtime.Object, opt ...patcher.OptionFunc) ([]byte, error) {
+	return m.applyFn(obj, opt...)
+}
+
+func TestTestStoreRelease(t *testing.T) {
+
+	hook := &callbackHook{
+		crdName:      "my-ghr",
+		crdNamespace: "test-ns",
+	}
+	t.Run("nil release", func(t *testing.T) {
+		s := &callbackServer{}
+		if err := s.storeRelease(hook, nil, false); err != nil {
+			t.Error("Did not expect store release to error on nil release")
+		}
+	})
+
+	t.Run("happy path", func(t *testing.T) {
+		var applied *v1alpha1.GitHubRepository
+		s := &callbackServer{
+			patcher: &mockPatcher{
+				getFn: func(i interface{}, ns, name string) error {
+					return nil
+				},
+				applyFn: func(obj runtime.Object, opt ...patcher.OptionFunc) ([]byte, error) {
+					applied = obj.(*v1alpha1.GitHubRepository)
+					return nil, nil
+				},
+			},
+		}
+		release := &v1alpha1.GitHubRelease{
+			Name: "fake-release",
+		}
+
+		if err := s.storeRelease(hook, release, false); err != nil {
+			t.Error("Did not expect store release to error on happy path")
+		}
+
+		if len(applied.Status.Releases) != 1 {
+			t.Error("Did not store release")
+		}
+
+		if applied.Status.Releases[0].Name != release.Name {
+			t.Error("Wrong release stored")
+		}
+	})
+}
+
 func TestGetPullRequestRelease(t *testing.T) {
-	release, err := getPullRequestRelease(prPayload)
+	release, active, err := getPullRequestRelease(prPayload)
 	if err != nil {
 		t.Errorf("Did not expect an error, got '%s'", err)
+	}
+
+	if !active {
+		t.Error("Did not expect release to be inactive")
 	}
 
 	if expected := "changes"; release.Name != expected {
@@ -34,9 +94,13 @@ func TestGetPullRequestRelease(t *testing.T) {
 }
 
 func TestGetOfficialRelease(t *testing.T) {
-	release, err := getOfficialRelease(releasePayload)
+	release, active, err := getOfficialRelease(releasePayload)
 	if err != nil {
 		t.Errorf("Did not expect an error, got '%s'", err)
+	}
+
+	if !active {
+		t.Error("Did not expect release to be inactive")
 	}
 
 	if expected := "0.0.1"; release.Name != expected {
