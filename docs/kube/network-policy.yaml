@@ -59,7 +59,7 @@ spec:
       serviceAccountName: heighliner-network-policy
       containers:
         - name: network-policy-controller
-          image: manifoldco/heighliner:latest
+          image: arigato/heighliner:latest
           imagePullPolicy: IfNotPresent
           args:
           - npw

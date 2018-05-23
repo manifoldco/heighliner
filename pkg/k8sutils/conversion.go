@@ -22,6 +22,11 @@ func PtrInt64(i int64) *int64 {
 	return &i
 }
 
+// PtrString converts a value of string to the pointer of that value.
+func PtrString(s string) *string {
+	return &s
+}
+
 // JSONBytes converts an interface value to a set of bytes encoded as JSON.
 func JSONBytes(val interface{}) []byte {
 	bts, err := json.Marshal(val)
