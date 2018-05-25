@@ -87,6 +87,7 @@ VCS_SHA?=$(shell git rev-parse --verify HEAD)
 BUILD_DATE?=$(shell git show -s --date=iso8601-strict --pretty=format:%cd $$VCS_SHA)
 VCS_BRANCH?=$(shell git branch | grep \* | cut -f2 -d' ')
 
+
 RELEASE_VERSION?=$(shell git describe --always --tags --dirty | sed 's/^v//')
 ifdef TRAVIS_TAG
 	RELEASE_VERSION=$(shell echo $(TRAVIS_TAG) | sed 's/^v//')

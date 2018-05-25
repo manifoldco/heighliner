@@ -13,7 +13,8 @@ type NetworkPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
 
-	Spec NetworkPolicySpec `json:"spec"`
+	Spec   NetworkPolicySpec `json:"spec"`
+	Status NetworkStatus     `json:"status"`
 }
 
 // NetworkPolicyList is a list of NetworkPolicy CRDs.
@@ -120,6 +121,21 @@ type ManualUpdateStrategy struct {
 // Microservice and use the latest available release to link to the internal and
 // external DNS.
 type LatestUpdateStrategy struct{}
+
+// NetworkStatus provides external domains and associated SemVer from the release
+type NetworkStatus struct {
+	Domains []Domain `json:"domains"`
+}
+
+// Domain is represents url associated with the NetworkPolicy and the associated SemVer
+type Domain struct {
+	// Url is the url that points to the application
+	URL string `json:"url"`
+
+	// SemVer is the SemVer release object linked to this NetworkStatus if the
+	// VersioningPolicy associated with it is SemVer.
+	SemVer *SemVerRelease `json:"semVer,omitempty"`
+}
 
 // NetworkPolicyValidationSchema represents the OpenAPIV3Schema validation for
 // the NetworkPolicy CRD.
