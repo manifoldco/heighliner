@@ -2,7 +2,7 @@ package githubrepository
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"log"
 	"net/http"
 	"sync"
@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jelmersnoeck/kubekit/patcher"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -99,7 +100,72 @@ func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	fmt.Println(string(payload))
+	var release *v1alpha1.GitHubRelease
+	var active bool
+	switch r.Header.Get("X-GitHub-Event") {
+	case "ping":
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK!"))
+		return
+	case "pull_request":
+		release, active, err = getPullRequestRelease(payload)
+	case "release":
+		release, active, err = getOfficialRelease(payload)
+	}
+
+	if err := s.storeRelease(&cbHook, release, active); err != nil {
+		log.Printf("Could not store release: %s", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK!"))
+}
+
+func (s *callbackServer) storeRelease(hook *callbackHook, release *v1alpha1.GitHubRelease, active bool) error {
+	if release == nil {
+		return nil
+	}
+
+	ghr := v1alpha1.GitHubRepository{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "GitHubRepository",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+	if err := s.patcher.Get(&ghr, hook.crdNamespace, hook.crdName); err != nil {
+		log.Printf("Could not find GitHubRepository: %s", err)
+		return err
+	}
+
+	found := false
+	newRel := make([]v1alpha1.GitHubRelease, 0, len(ghr.Status.Releases))
+	for _, r := range ghr.Status.Releases {
+		if r.Name == release.Name {
+			found = true
+			if !active {
+				continue
+			}
+			release.DeepCopyInto(&r)
+		}
+
+		newRel = append(newRel, r)
+	}
+
+	ghr.Status.Releases = newRel
+
+	if !found && !active {
+		ghr.Status.Releases = append(ghr.Status.Releases, *release)
+	}
+
+	if _, err := s.patcher.Apply(&ghr); err != nil {
+		log.Printf("Could not update GitHubRepository: %s", err)
+		return err
+	}
+
+	return nil
 }
 
 func (s *callbackServer) hookForRepo(owner, name string) (callbackHook, bool) {
@@ -153,4 +219,50 @@ func (s *callbackServer) isHookPresent(cbh callbackHook) (int, bool) {
 	}
 
 	return 0, false
+}
+
+func getPullRequestRelease(payload []byte) (*v1alpha1.GitHubRelease, bool, error) {
+	pre := &github.PullRequestEvent{}
+	if err := json.Unmarshal(payload, pre); err != nil {
+		return nil, false, err
+	}
+
+	return &v1alpha1.GitHubRelease{
+		Name:       *pre.PullRequest.Head.Ref,
+		Tag:        *pre.PullRequest.Head.SHA,
+		Level:      v1alpha1.SemVerLevelPreview,
+		ReleasedAt: releasedAtFromGitHubTimestamp(pre.PullRequest.Head.Repo.UpdatedAt),
+	}, *pre.PullRequest.State != "closed", nil
+}
+
+func getOfficialRelease(payload []byte) (*v1alpha1.GitHubRelease, bool, error) {
+	re := &github.ReleaseEvent{}
+	if err := json.Unmarshal(payload, re); err != nil {
+		return nil, false, err
+	}
+
+	if *re.Release.Draft {
+		return nil, false, nil
+	}
+
+	lvl := v1alpha1.SemVerLevelRelease
+	if re.Release.Prerelease != nil && *re.Release.Prerelease {
+		lvl = v1alpha1.SemVerLevelReleaseCandidate
+	}
+
+	name := *re.Release.TagName
+	if re.Release.Name != nil {
+		name = *re.Release.Name
+	}
+
+	return &v1alpha1.GitHubRelease{
+		Name:       name,
+		Tag:        *re.Release.TagName,
+		Level:      lvl,
+		ReleasedAt: releasedAtFromGitHubTimestamp(re.Release.PublishedAt),
+	}, true, nil // There's no webhook for release deletion
+}
+
+func releasedAtFromGitHubTimestamp(ts *github.Timestamp) metav1.Time {
+	return metav1.NewTime(ts.Time)
 }
