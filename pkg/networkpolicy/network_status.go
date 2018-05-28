@@ -2,9 +2,9 @@ package networkpolicy
 
 import "github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 
-func buildNetworkStatusForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (v1alpha1.NetworkStatus, error) {
+func buildNetworkStatusForRelease(np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (v1alpha1.NetworkPolicyStatus, error) {
 
-	ns := v1alpha1.NetworkStatus{
+	ns := v1alpha1.NetworkPolicyStatus{
 		Domains: []v1alpha1.Domain{},
 	}
 
