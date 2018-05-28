@@ -13,6 +13,7 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
+	"github.com/manifoldco/heighliner/pkg/networkpolicy"
 	"golang.org/x/oauth2"
 
 	"github.com/jelmersnoeck/kubekit"
@@ -102,7 +103,7 @@ func (c *Controller) Run() error {
 }
 
 func (c *Controller) run(ctx context.Context) {
-	watcher := kubekit.NewWatcher(
+	repoWatcher := kubekit.NewWatcher(
 		c.rc,
 		c.namespace,
 		&GitHubRepositoryResource,
@@ -123,7 +124,21 @@ func (c *Controller) run(ctx context.Context) {
 		},
 	)
 
-	go watcher.Run(ctx.Done())
+	go repoWatcher.Run(ctx.Done())
+
+	svcWatcher := kubekit.NewWatcher(
+		c.rc,
+		c.namespace,
+		&networkpolicy.NetworkPolicyResource,
+		cache.ResourceEventHandlerFuncs{
+			AddFunc:    func(obj interface{}) { c.syncDeployment(obj, false) },
+			UpdateFunc: func(old, new interface{}) { c.syncDeployment(new, false) },
+			DeleteFunc: func(obj interface{}) { c.syncDeployment(obj, true) },
+		},
+	)
+
+	go svcWatcher.Run(ctx.Done())
+
 }
 
 func (c *Controller) deleteHooks(obj interface{}) error {
@@ -341,4 +356,133 @@ func (c *Controller) propagateHook(cfg webhookConfig, hook *v1alpha1.GitHubHook,
 	}
 
 	c.hooksChan <- cbh
+}
+
+func (c *Controller) syncDeployment(obj interface{}, deleted bool) {
+	np := obj.(*v1alpha1.NetworkPolicy)
+
+	// Find the microservice referenced by this network policy
+	msvcName := np.Name
+	if np.Spec.Microservice == nil {
+		msvcName = np.Spec.Microservice.Name
+	}
+
+	msvc := v1alpha1.Microservice{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Microservice",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+	if err := c.patcher.Get(&msvc, np.Namespace, msvcName); err != nil {
+		log.Print("Error fetching Microservice:", err)
+		return
+	}
+
+	// Find the ImagePolicy for the microservice
+	ip := v1alpha1.ImagePolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ImagePolicy",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+	if err := c.patcher.Get(&ip, msvc.Namespace, msvc.Spec.ImagePolicy.Name); err != nil {
+		log.Print("Error fetching ImagePolicy:", err)
+		return
+	}
+
+	if ip.Spec.Filter.GitHub == nil { // ignore image policies that aren't for github
+		return
+	}
+
+	// Find the relevant GitHubRepository
+	ghr := v1alpha1.GitHubRepository{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "GitHubRepository",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+	if err := c.patcher.Get(&ghr, msvc.Namespace, ip.Spec.Filter.GitHub.Name); err != nil {
+		log.Print("Error fetching GitHubRepository:", err)
+		return
+	}
+
+	domains := np.Status.Domains
+	if deleted {
+		domains = nil
+	}
+	changed, newReleases := reconcileDeployments(domains, ghr.Status.Releases)
+	if len(changed) == 0 {
+		return
+	}
+
+	// Fix the network policy reference. reconciliation doesn't care about it.
+	npr := v1.LocalObjectReference{Name: np.Name}
+	for i := range newReleases {
+		if newReleases[i].Deployment != nil {
+			newReleases[i].Deployment.NetworkPolicy = npr
+		}
+	}
+	ghr.Status.Releases = newReleases
+
+	// Create deployment / status in github
+	for _, idx := range changed {
+		id, err := c.createGitHubDeployment(newReleases[idx])
+		if err != nil {
+			log.Print("Error creating GitHub deployment:", err)
+			continue // try the rest of the changes
+		}
+
+		newReleases[idx].Deployment.ID = id
+	}
+
+	// persist state back to k8s
+	if _, err := c.patcher.Apply(&ghr); err != nil {
+		log.Printf("Error syncing GitHubRepository %s (%s): %s", ghr.Name, ghr.Namespace, err)
+	}
+}
+
+func (c *Controller) createGitHubDeployment(release v1alpha1.GitHubRelease) (int64, error) {
+	// XXX: fill me in
+	return 0, nil
+}
+
+func reconcileDeployments(domains []v1alpha1.Domain, releases []v1alpha1.GitHubRelease) ([]int, []v1alpha1.GitHubRelease) {
+	changed := make([]int, 0, len(releases))
+	newReleases := make([]v1alpha1.GitHubRelease, 0, len(releases))
+
+	for i, r := range releases {
+		found := false
+		for _, d := range domains {
+			if d.SemVer.Name != r.Name || d.SemVer.Version != r.Tag {
+				continue
+			}
+			found = true
+
+			if r.Deployment == nil {
+				changed = append(changed, i)
+				r.Deployment = &v1alpha1.Deployment{
+					State: "success",
+					URL:   &d.URL,
+				}
+			}
+			newReleases = append(newReleases, r)
+			break
+		}
+
+		if !found {
+			// There never was a domain for this release, or the domain was deleted.
+			// XXX: this code misses when we created a deploy in github but
+			// never saved it to the api server. a full reconcile will have to catch that.
+
+			if r.Deployment != nil {
+				r.Deployment.URL = nil
+				r.Deployment.State = "inactive"
+				changed = append(changed, i)
+			}
+
+			newReleases = append(newReleases, r)
+		}
+	}
+
+	return changed, newReleases
 }
