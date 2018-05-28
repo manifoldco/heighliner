@@ -2,7 +2,6 @@ package svc
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log"
 	"os"
@@ -79,22 +78,9 @@ func (c *Controller) run(ctx context.Context) {
 				c.patchMicroservice(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
-				oldData, err := getStatuslessData(old)
-				if err != nil {
-					return
+				if ok, err := k8sutils.ShouldSync(old, new); ok && err == nil {
+					c.patchMicroservice(new)
 				}
-
-				newData, err := getStatuslessData(new)
-				if err != nil {
-					return
-				}
-
-				// this was a status update, ignore patching
-				if string(oldData) == string(newData) {
-					return
-				}
-
-				c.patchMicroservice(new)
 			},
 			DeleteFunc: func(obj interface{}) {
 				svc := obj.(*v1alpha1.Microservice).DeepCopy()
@@ -104,25 +90,6 @@ func (c *Controller) run(ctx context.Context) {
 	)
 
 	go watcher.Run(ctx.Done())
-}
-
-func getStatuslessData(obj interface{}) ([]byte, error) {
-	svc := obj.(*v1alpha1.Microservice).DeepCopy()
-
-	byteData, err := json.Marshal(svc)
-	if err != nil {
-		log.Printf("Error marshalling Microservice %s: %s", svc.Name, err)
-		return nil, err
-	}
-
-	var mapData map[string]interface{}
-	if err := json.Unmarshal(byteData, &mapData); err != nil {
-		log.Printf("Error unmarshalling Microservice %s: %s", svc.Name, err)
-		return nil, err
-	}
-
-	delete(mapData, "status")
-	return json.Marshal(mapData)
 }
 
 func (c *Controller) patchMicroservice(obj interface{}) error {

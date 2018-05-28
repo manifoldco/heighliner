@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
+	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
@@ -75,7 +76,15 @@ func (c *Controller) run(ctx context.Context) {
 				c.syncNetworking(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
-				c.syncNetworking(new)
+				ok, err := k8sutils.ShouldSync(old, new)
+				if err != nil {
+					cp := old.(*v1alpha1.NetworkPolicy).DeepCopy()
+					log.Printf("Error syncing networkpolicy %s: %s:", cp.Name, err)
+				}
+
+				if ok {
+					c.syncNetworking(new)
+				}
 			},
 			DeleteFunc: func(obj interface{}) {
 				cp := obj.(*v1alpha1.NetworkPolicy).DeepCopy()
@@ -141,7 +150,8 @@ func syncReleaseGroup(cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.N
 	return nil
 }
 
-func syncSelectedRelease(cl patchClient, ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+func syncSelectedRelease(cl patchClient, ms *v1alpha1.Microservice, networkPolicy *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+	np := networkPolicy.DeepCopy()
 	if len(np.Spec.ExternalDNS) == 0 {
 		return nil
 	}
@@ -176,6 +186,23 @@ func syncSelectedRelease(cl patchClient, ms *v1alpha1.Microservice, np *v1alpha1
 
 	if _, err := cl.Apply(ing); err != nil {
 		log.Printf("Error syncing Ingress for release %s: %s", name, err)
+		return err
+	}
+
+	status, err := buildNetworkStatusForRelease(np, externalRelease)
+	if err != nil {
+		log.Printf("Error building Network Status for release %s: %s", name, err)
+		return err
+	}
+
+	// need to specify types again until we resolve the mapping issue
+	np.TypeMeta = metav1.TypeMeta{
+		Kind:       "NetworkPolicy",
+		APIVersion: "hlnr.io/v1alpha1",
+	}
+	np.Status = status
+	if _, err := cl.Apply(np); err != nil {
+		log.Printf("Error syncing NetworkStatus for release %s: %s", name, err)
 		return err
 	}
 
