@@ -76,7 +76,13 @@ func (c *Controller) run(ctx context.Context) {
 				c.syncNetworking(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
-				if ok, err := k8sutils.ShouldSync(old, new); ok && err == nil {
+				ok, err := k8sutils.ShouldSync(old, new)
+				if err != nil {
+					cp := old.(*v1alpha1.NetworkPolicy).DeepCopy()
+					log.Printf("Error syncing networkpolicy %s: %s:", cp.Name, err)
+				}
+
+				if ok {
 					c.syncNetworking(new)
 				}
 			},
