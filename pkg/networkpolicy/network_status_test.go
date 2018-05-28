@@ -29,6 +29,12 @@ func TestNetworkStatus(t *testing.T) {
 			t.Errorf("Expected status domains to be of length 1, got '%d'", len(status.Domains))
 		}
 
+		actualDomainURL := status.Domains[0].URL
+		expectedDomainURL := "my.cool.domain"
+		if actualDomainURL != expectedDomainURL {
+			t.Errorf("Expected domain URL to be %s, got '%s'", expectedDomainURL, actualDomainURL)
+		}
+
 	})
 
 	t.Run("with a multi domain network policy", func(t *testing.T) {
@@ -48,6 +54,18 @@ func TestNetworkStatus(t *testing.T) {
 		status, _ := buildNetworkStatusForRelease(np, release)
 		if len(status.Domains) != 2 {
 			t.Errorf("Expected status domains to be of length 2, got '%d'", len(status.Domains))
+		}
+
+		actualFirstDomainURL := status.Domains[0].URL
+		expectedFirstDomainURL := "my.cool.domain"
+		if actualFirstDomainURL != expectedFirstDomainURL {
+			t.Errorf("Expected domain URL to be %s, got '%s'", expectedFirstDomainURL, actualFirstDomainURL)
+		}
+
+		actualSecondDomainURL := status.Domains[1].URL
+		expectedSecondDomainURL := "my.other.cool.domain"
+		if actualSecondDomainURL != expectedSecondDomainURL {
+			t.Errorf("Expected domain URL to be %s, got '%s'", expectedSecondDomainURL, actualSecondDomainURL)
 		}
 
 	})
