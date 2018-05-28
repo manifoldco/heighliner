@@ -85,26 +85,18 @@ DOCKER_RELEASES=$(addprefix release-,$(CMDs))
 
 VCS_SHA?=$(shell git rev-parse --verify HEAD)
 BUILD_DATE?=$(shell git show -s --date=iso8601-strict --pretty=format:%cd $$VCS_SHA)
-
-VCS_BRANCH?=
-ifdef TRAVIS_PULL_REQUEST_BRANCH
-	VCS_SHA=$(TRAVIS_PULL_REQUEST_SHA)
-	VCS_BRANCH=$(TRAVIS_PULL_REQUEST_BRANCH)
-else
-ifdef TRAVIS_BRANCH
-	VCS_BRANCH=$(TRAVIS_BRANCH)
-else
-	VCS_BRANCH=$(shell git branch | grep \* | cut -f2 -d' ')
-endif
-endif
+VCS_BRANCH?=$(shell git branch | grep \* | cut -f2 -d' ')
 
 RELEASE_VERSION?=$(shell git describe --always --tags --dirty | sed 's/^v//')
 ifdef TRAVIS_TAG
 	RELEASE_VERSION=$(shell echo $(TRAVIS_TAG) | sed 's/^v//')
 endif
 
-ifneq ($(VCS_BRANCH),$(BASE_BRANCH))
-	RELEASE_VERSION=$(shell echo $(VCS_BRANCH) | sed "s/[^[:alnum:].-]/-/g")-$(VCS_SHA)
+
+RELEASE_NAME?=$(patsubst docker-%,%,$@)
+ifdef TRAVIS_PULL_REQUEST_BRANCH
+	RELEASE_VERSION=$(TRAVIS_PULL_REQUEST_SHA)
+	RELEASE_NAME="$(patsubst docker-%,%,$@)-$(shell echo $(TRAVIS_PULL_REQUEST_BRANCH) | sed "s/[^[:alnum:].-]/-/g")"
 endif
 
 $(CMDs:%=build/docker/%/Dockerfile):
@@ -120,7 +112,7 @@ bins: $(BINS:%=$(PREFIX)%)
 $(DOCKER_IMAGES):
 	docker build -t $(DOCKER_REPOSITORY)/$(patsubst docker-%,%,$@):latest \
 		--label "org.label-schema.build-date"="$(BUILD_DATE)" \
-		--label "org.label-schema.name"="$(patsubst docker-%,%,$@)" \
+		--label "org.label-schema.name"="$(RELEASE_NAME)" \
 		--label "org.label-schema.vcs-ref"="$(VCS_SHA)" \
 		--label "org.label-schema.vendor"="Arigato Machine Inc." \
 		--label "org.label-schema.version"="$(RELEASE_VERSION)" \
@@ -130,7 +122,7 @@ $(DOCKER_IMAGES):
 $(DOCKER_IMAGES:%=%-dev): docker-%-dev: build/docker/%/Dockerfile bin/%-dev
 	docker build -t $(DOCKER_REPOSITORY)/$(patsubst docker-%-dev,%,$@):latest \
 		--label "org.label-schema.build-date"="$(BUILD_DATE)" \
-		--label "org.label-schema.name"="$(patsubst docker-%,%,$@)" \
+		--label "org.label-schema.name"="$(RELEASE_NAME)" \
 		--label "org.label-schema.vcs-ref"="$(VCS_SHA)" \
 		--label "org.label-schema.vendor"="Arigato Machine Inc." \
 		--label "org.label-schema.version"="$(RELEASE_VERSION)" \
@@ -152,8 +144,8 @@ ifeq ($(VCS_BRANCH),$(BASE_BRANCH))
 	docker push $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):latest
 else
 	# On branches, we want to push specific branch version and latest branch
-	docker tag $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@) $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(VCS_BRANCH)
-	docker push $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(VCS_BRANCH)
+	docker tag $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@) $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(RELEASE_VERSION)
+	docker push $(DOCKER_REPOSITORY)/$(patsubst release-%,%,$@):$(RELEASE_VERSION)
 endif
 release: $(DOCKER_RELEASES)
 
