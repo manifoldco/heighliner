@@ -26,6 +26,11 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) 
 		affinity = DefaultAffinity("hlnr.io/service", crd.Name)
 	}
 
+	security := crd.Spec.Security
+	if security == nil {
+		security = &v1alpha1.SecurityPolicySpec{}
+	}
+
 	populateContainers(crd)
 
 	dpl := &v1beta1.Deployment{
@@ -60,9 +65,9 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) 
 				},
 				Spec: corev1.PodSpec{
 					ImagePullSecrets:             crd.Spec.ImagePullSecrets,
-					ServiceAccountName:           crd.Spec.Security.ServiceAccountName,
-					AutomountServiceAccountToken: k8sutils.PtrBool(crd.Spec.Security.AutomountServiceAccountToken),
-					SecurityContext:              crd.Spec.Security.SecurityContext,
+					ServiceAccountName:           security.ServiceAccountName,
+					AutomountServiceAccountToken: k8sutils.PtrBool(security.AutomountServiceAccountToken),
+					SecurityContext:              security.SecurityContext,
 					Affinity:                     affinity,
 					RestartPolicy:                availability.RestartPolicy,
 					Containers:                   crd.Spec.Containers,
