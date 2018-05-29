@@ -31,7 +31,7 @@ type NetworkPolicySpec struct {
 	// create DNS entries for.
 	// If the Microservice Name is not provided, the name of the NetworkPolicy
 	// CRD will be used.
-	Microservice string `json:"microservice,omitempty"`
+	Microservice *corev1.LocalObjectReference `json:"microservice,omitempty"`
 
 	// SessionAffinity lets you define a config for SessionAffinity. If no
 	// config is provided, SessionAffinity will be "None".
