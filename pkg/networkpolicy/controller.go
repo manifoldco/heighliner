@@ -237,8 +237,8 @@ func getMicroservice(cl getClient, np *v1alpha1.NetworkPolicy) (*v1alpha1.Micros
 	}
 
 	name := np.Name
-	if np.Spec.Microservice != "" {
-		name = np.Spec.Microservice
+	if np.Spec.Microservice != nil {
+		name = np.Spec.Microservice.Name
 	}
 
 	if err := cl.Get(ms, np.Namespace, name); err != nil {
