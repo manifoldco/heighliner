@@ -43,9 +43,7 @@ type ImagePolicyStatus struct {
 
 // ImagePolicyFilter will define how we can filter where images come from
 type ImagePolicyFilter struct {
-	GitHub *v1.LocalObjectReference `json:"github"`
-	GitLab *v1.LocalObjectReference `json:"gitlab"`
-	Static *v1.LocalObjectReference `json:"static"`
+	GitHub *v1.LocalObjectReference `json:"github,omitempty"`
 }
 
 // ImagePolicyValidationSchema represents the OpenAPIV3Schema validation for
@@ -55,9 +53,20 @@ var ImagePolicyValidationSchema = &v1beta1.CustomResourceValidation{
 		Required: []string{"spec"},
 		Properties: map[string]v1beta1.JSONSchemaProps{
 			"spec": {
-				Required: []string{"image", "versioningPolicy"},
+				Required: []string{"image", "versioningPolicy", "filter"},
+				Properties: map[string]v1beta1.JSONSchemaProps{
+					"filter": filterValidationSchema,
+				},
 			},
 			"status": ReleaseValidationSchema,
+		},
+	},
+}
+
+var filterValidationSchema = v1beta1.JSONSchemaProps{
+	OneOf: []v1beta1.JSONSchemaProps{
+		{
+			Required: []string{"github"},
 		},
 	},
 }
