@@ -2,7 +2,6 @@ package githubrepository
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -52,6 +51,7 @@ type webhookClient interface {
 
 type deploymentClient interface {
 	CreateDeployment(context.Context, string, string, *github.DeploymentRequest) (*github.Deployment, *github.Response, error)
+	CreateDeploymentStatus(context.Context, string, string, int64, *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error)
 }
 
 const authTokenKey = "GITHUB_AUTH_TOKEN"
@@ -131,7 +131,7 @@ func (c *Controller) run(ctx context.Context) {
 
 	go repoWatcher.Run(ctx.Done())
 
-	svcWatcher := kubekit.NewWatcher(
+	npWatcher := kubekit.NewWatcher(
 		c.rc,
 		c.namespace,
 		&networkpolicy.NetworkPolicyResource,
@@ -142,7 +142,7 @@ func (c *Controller) run(ctx context.Context) {
 		},
 	)
 
-	go svcWatcher.Run(ctx.Done())
+	go npWatcher.Run(ctx.Done())
 
 }
 
@@ -433,12 +433,14 @@ func (c *Controller) syncDeployment(obj interface{}, deleted bool) {
 	// Create deployment / status in github
 	for _, idx := range changed {
 		id, err := createGitHubDeployment(ctx, ghClient.Repositories, &ghr, newReleases[idx])
+		if id != nil {
+			newReleases[idx].Deployment.ID = id
+		}
+
 		if err != nil {
 			log.Print("Error creating GitHub deployment:", err)
 			continue // try the rest of the changes
 		}
-
-		newReleases[idx].Deployment.ID = id
 	}
 
 	// persist state back to k8s
@@ -447,26 +449,34 @@ func (c *Controller) syncDeployment(obj interface{}, deleted bool) {
 	}
 }
 
-func createGitHubDeployment(ctx context.Context, cl deploymentClient, repo *v1alpha1.GitHubRepository, release v1alpha1.GitHubRelease) (int64, error) {
-	payload := map[string]string{
-		"url": *release.Deployment.URL,
-	}
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		return 0, err
-	}
-	dpl := &github.DeploymentRequest{
-		AutoMerge:   k8sutils.PtrBool(false),
-		Description: k8sutils.PtrString("Heighliner Deployment"),
-		Payload:     k8sutils.PtrString(string(jsonPayload)),
+func createGitHubDeployment(ctx context.Context, cl deploymentClient, repo *v1alpha1.GitHubRepository, release v1alpha1.GitHubRelease) (*int64, error) {
+	id := release.Deployment.ID
+	if id == nil {
+		dpl := &github.DeploymentRequest{
+			AutoMerge:            k8sutils.PtrBool(false),
+			Description:          k8sutils.PtrString("Heighliner Deployment"),
+			Ref:                  k8sutils.PtrString(release.Tag),
+			TransientEnvironment: k8sutils.PtrBool(release.Name != repo.Spec.Repo),
+		}
+
+		deploy, _, err := cl.CreateDeployment(ctx, repo.Spec.Owner, repo.Spec.Repo, dpl)
+		if err != nil {
+			return nil, err
+		}
+
+		id = deploy.ID
 	}
 
-	deploy, _, err := cl.CreateDeployment(ctx, repo.Spec.Owner, repo.Spec.Repo, dpl)
-	if err != nil {
-		return 0, err
+	// XXX: this has the potential to create duplicate statuses, if we've
+	// already made it, but not persisted. We could query first.
+	status := &github.DeploymentStatusRequest{
+		AutoInactive:   k8sutils.PtrBool(false), // we control ageing these off
+		State:          &release.Deployment.State,
+		EnvironmentURL: release.Deployment.URL,
 	}
 
-	return *deploy.ID, nil
+	_, _, err := cl.CreateDeploymentStatus(ctx, repo.Spec.Owner, repo.Spec.Repo, *id, status)
+	return id, err
 }
 
 func reconcileDeployments(domains []v1alpha1.Domain, releases []v1alpha1.GitHubRelease) ([]int, []v1alpha1.GitHubRelease) {

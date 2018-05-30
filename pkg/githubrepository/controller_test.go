@@ -52,13 +52,23 @@ func TestGetSecretAuthToken(t *testing.T) {
 }
 
 func TestCreateDeployment(t *testing.T) {
+	dplID := int64(1234)
 	t.Run("with a successful request", func(t *testing.T) {
 		cl := &dummyDeploymentClient{
 			f: func(ctx context.Context, owner, repo string, request *github.DeploymentRequest) (*github.Deployment, *github.Response, error) {
 				dpl := &github.Deployment{
-					ID: k8sutils.PtrInt64(1234),
+					ID: &dplID,
 				}
 				return dpl, nil, nil
+			},
+
+			sf: func(ctx context.Context, owner, repo string, id int64, request *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error) {
+				if id != dplID {
+					t.Errorf("Wrong ID supplied to deployment status")
+				}
+
+				status := &github.DeploymentStatus{}
+				return status, nil, nil
 			},
 		}
 
@@ -80,18 +90,23 @@ func TestCreateDeployment(t *testing.T) {
 			t.Errorf("Expected no error, got '%s'", err)
 		}
 
-		if id != int64(1234) {
+		if *id != int64(1234) {
 			t.Errorf("Expected id to equal '1234', got '%d'", id)
 		}
 	})
 }
 
 type dummyDeploymentClient struct {
-	f func(context.Context, string, string, *github.DeploymentRequest) (*github.Deployment, *github.Response, error)
+	f  func(context.Context, string, string, *github.DeploymentRequest) (*github.Deployment, *github.Response, error)
+	sf func(context.Context, string, string, int64, *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error)
 }
 
 func (c *dummyDeploymentClient) CreateDeployment(ctx context.Context, owner, repo string, request *github.DeploymentRequest) (*github.Deployment, *github.Response, error) {
 	return c.f(ctx, owner, repo, request)
+}
+
+func (c *dummyDeploymentClient) CreateDeploymentStatus(ctx context.Context, owner, repo string, id int64, request *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error) {
+	return c.sf(ctx, owner, repo, id, request)
 }
 
 type dummyClient struct {
@@ -157,8 +172,4 @@ func TestReconcileDeployments(t *testing.T) {
 			}
 		})
 	}
-
-	t.Run("Removed domain", func(t *testing.T) {
-
-	})
 }
