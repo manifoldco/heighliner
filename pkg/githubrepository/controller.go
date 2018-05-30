@@ -176,6 +176,12 @@ func (c *Controller) syncPolicy(obj interface{}) error {
 		return err
 	}
 
+	wh := ghp.Status.Webhook
+	if wh != nil && wh.ID != nil && *wh.ID == *hook.ID && wh.Secret == hook.Secret {
+		// no change needed
+		return nil
+	}
+
 	// need to specify types again until we resolve the mapping issue
 	ghp.TypeMeta = metav1.TypeMeta{
 		Kind:       "GitHubRepository",
