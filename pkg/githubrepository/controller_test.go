@@ -1,12 +1,15 @@
 package githubrepository
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
 	"k8s.io/api/core/v1"
 
+	"github.com/google/go-github/github"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
+	"github.com/manifoldco/heighliner/pkg/k8sutils"
 )
 
 func TestGetSecretAuthToken(t *testing.T) {
@@ -46,6 +49,49 @@ func TestGetSecretAuthToken(t *testing.T) {
 			t.Errorf("Expected token to equal '%s', got '%s'", expected, token)
 		}
 	})
+}
+
+func TestCreateDeployment(t *testing.T) {
+	t.Run("with a successful request", func(t *testing.T) {
+		cl := &dummyDeploymentClient{
+			f: func(ctx context.Context, owner, repo string, request *github.DeploymentRequest) (*github.Deployment, *github.Response, error) {
+				dpl := &github.Deployment{
+					ID: k8sutils.PtrInt64(1234),
+				}
+				return dpl, nil, nil
+			},
+		}
+
+		repo := &v1alpha1.GitHubRepository{
+			Spec: v1alpha1.GitHubRepositorySpec{
+				Owner: "manifoldco",
+				Repo:  "heighliner",
+			},
+		}
+
+		release := v1alpha1.GitHubRelease{
+			Deployment: &v1alpha1.Deployment{
+				URL: k8sutils.PtrString("my-url"),
+			},
+		}
+
+		id, err := createGitHubDeployment(context.Background(), cl, repo, release)
+		if err != nil {
+			t.Errorf("Expected no error, got '%s'", err)
+		}
+
+		if id != int64(1234) {
+			t.Errorf("Expected id to equal '1234', got '%d'", id)
+		}
+	})
+}
+
+type dummyDeploymentClient struct {
+	f func(context.Context, string, string, *github.DeploymentRequest) (*github.Deployment, *github.Response, error)
+}
+
+func (c *dummyDeploymentClient) CreateDeployment(ctx context.Context, owner, repo string, request *github.DeploymentRequest) (*github.Deployment, *github.Response, error) {
+	return c.f(ctx, owner, repo, request)
 }
 
 type dummyClient struct {

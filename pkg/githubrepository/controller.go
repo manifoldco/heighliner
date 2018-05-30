@@ -2,6 +2,7 @@ package githubrepository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -47,6 +48,10 @@ type Controller struct {
 
 type webhookClient interface {
 	CreateHook(context.Context, string, string, *github.Hook) (*github.Hook, *github.Response, error)
+}
+
+type deploymentClient interface {
+	CreateDeployment(context.Context, string, string, *github.DeploymentRequest) (*github.Deployment, *github.Response, error)
 }
 
 const authTokenKey = "GITHUB_AUTH_TOKEN"
@@ -151,17 +156,11 @@ func (c *Controller) deleteHooks(obj interface{}) error {
 	repo := ghp.Spec
 	ctx := context.Background()
 
-	authToken, err := getSecretAuthToken(c.patcher, ghp.Namespace, repo.ConfigSecret.Name)
+	client, err := getGitHubClient(ctx, c.patcher, ghp.Namespace, repo.ConfigSecret.Name)
 	if err != nil {
-		log.Printf("Could not get authToken for repository %s (%s): %s", ghp.Name, ghp.Namespace, err)
+		log.Printf("Could not get GitHub client: %s", err)
 		return err
 	}
-
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: authToken},
-	)
-	tc := oauth2.NewClient(ctx, ts)
-	client := github.NewClient(tc)
 
 	if _, err := client.Repositories.DeleteHook(ctx, repo.Owner, repo.Repo, *ghp.Status.Webhook.ID); err != nil {
 		log.Printf("Could not delete hook from GitHub for %s (%s): %s", ghp.Name, ghp.Namespace, err)
@@ -424,9 +423,16 @@ func (c *Controller) syncDeployment(obj interface{}, deleted bool) {
 	}
 	ghr.Status.Releases = newReleases
 
+	ctx := context.Background()
+	ghClient, err := getGitHubClient(ctx, c.patcher, ghr.Namespace, ghr.Spec.ConfigSecret.Name)
+	if err != nil {
+		log.Printf("Could not fetch client: %s", err)
+		return
+	}
+
 	// Create deployment / status in github
 	for _, idx := range changed {
-		id, err := c.createGitHubDeployment(newReleases[idx])
+		id, err := createGitHubDeployment(ctx, ghClient.Repositories, &ghr, newReleases[idx])
 		if err != nil {
 			log.Print("Error creating GitHub deployment:", err)
 			continue // try the rest of the changes
@@ -441,9 +447,26 @@ func (c *Controller) syncDeployment(obj interface{}, deleted bool) {
 	}
 }
 
-func (c *Controller) createGitHubDeployment(release v1alpha1.GitHubRelease) (int64, error) {
-	// XXX: fill me in
-	return 0, nil
+func createGitHubDeployment(ctx context.Context, cl deploymentClient, repo *v1alpha1.GitHubRepository, release v1alpha1.GitHubRelease) (int64, error) {
+	payload := map[string]string{
+		"url": *release.Deployment.URL,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return 0, err
+	}
+	dpl := &github.DeploymentRequest{
+		AutoMerge:   k8sutils.PtrBool(false),
+		Description: k8sutils.PtrString("Heighliner Deployment"),
+		Payload:     k8sutils.PtrString(string(jsonPayload)),
+	}
+
+	deploy, _, err := cl.CreateDeployment(ctx, repo.Spec.Owner, repo.Spec.Repo, dpl)
+	if err != nil {
+		return 0, err
+	}
+
+	return *deploy.ID, nil
 }
 
 func reconcileDeployments(domains []v1alpha1.Domain, releases []v1alpha1.GitHubRelease) ([]int, []v1alpha1.GitHubRelease) {
@@ -485,4 +508,18 @@ func reconcileDeployments(domains []v1alpha1.Domain, releases []v1alpha1.GitHubR
 	}
 
 	return changed, newReleases
+}
+
+func getGitHubClient(ctx context.Context, cl getClient, namespace, name string) (*github.Client, error) {
+	authToken, err := getSecretAuthToken(cl, namespace, name)
+	if err != nil {
+		log.Printf("Could not get authToken for repository %s (%s): %s", name, namespace, err)
+		return nil, err
+	}
+
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: authToken},
+	)
+	tc := oauth2.NewClient(ctx, ts)
+	return github.NewClient(tc), nil
 }
