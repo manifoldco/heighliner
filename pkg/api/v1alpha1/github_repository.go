@@ -77,6 +77,16 @@ type GitHubRelease struct {
 	Tag        string      `json:"tag"`
 	Level      SemVerLevel `json:"level"`
 	ReleasedAt metav1.Time `json:"releasedAt"`
+	Deployment *Deployment `json:"deployment,omitempty"`
+}
+
+// Deployment represents a linking between a GitHub deployment and a network
+// policy. Through the release information we can determine a specific domain.
+type Deployment struct {
+	ID            *int64                      `json:"deployment"`
+	NetworkPolicy corev1.LocalObjectReference `json:"networkPolicy"`
+	State         string                      `json:"state"`
+	URL           *string                     `json:"url,omitempty"`
 }
 
 // GitHubRepositoryValidationSchema represents the OpenAPIV3Schema
