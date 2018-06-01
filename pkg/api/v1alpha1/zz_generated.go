@@ -859,6 +859,7 @@ func (in *MicroserviceSpec) DeepCopyInto(out *MicroserviceSpec) {
 	out.AvailabilityPolicy = in.AvailabilityPolicy
 	out.ConfigPolicy = in.ConfigPolicy
 	out.SecurityPolicy = in.SecurityPolicy
+	out.HealthPolicy = in.HealthPolicy
 	return
 }
 
