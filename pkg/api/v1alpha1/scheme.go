@@ -48,6 +48,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SecurityPolicyList{},
 		&GitHubRepository{},
 		&GitHubRepositoryList{},
+		&HealthPolicy{},
+		&HealthPolicyList{},
 	)
 
 	v1.AddToGroupVersion(scheme, v1alpha1.SchemeGroupVersion)

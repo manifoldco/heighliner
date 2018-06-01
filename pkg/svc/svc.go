@@ -48,6 +48,18 @@ var (
 		},
 	}
 
+	// HealthPolicyResource describes the CRD configuration for the HealthPolicy CRD.
+	HealthPolicyResource = kubekit.CustomResource{
+		Name:       "healthpolicy",
+		Plural:     "healthpolicies",
+		Group:      v1alpha1.GroupName,
+		Version:    v1alpha1.Version,
+		Scope:      v1beta1.NamespaceScoped,
+		Aliases:    []string{"hp"},
+		Object:     &v1alpha1.HealthPolicy{},
+		Validation: v1alpha1.HealthPolicyValidationSchema,
+	}
+
 	// ImagePolicyResource describes the CRD configuration for the ImagePolicy CRD.
 	ImagePolicyResource = kubekit.CustomResource{
 		Name:       "imagepolicy",
