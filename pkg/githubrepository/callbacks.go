@@ -135,6 +135,7 @@ func (s *callbackServer) storeRelease(hook *callbackHook, release *v1alpha1.GitH
 			APIVersion: "hlnr.io/v1alpha1",
 		},
 	}
+
 	if err := s.patcher.Get(&ghr, hook.crdNamespace, hook.crdName); err != nil {
 		log.Printf("Could not find GitHubRepository: %s", err)
 		return err
@@ -156,7 +157,7 @@ func (s *callbackServer) storeRelease(hook *callbackHook, release *v1alpha1.GitH
 
 	ghr.Status.Releases = newRel
 
-	if !found && !active {
+	if !found && active {
 		ghr.Status.Releases = append(ghr.Status.Releases, *release)
 	}
 

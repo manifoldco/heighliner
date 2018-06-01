@@ -33,7 +33,7 @@ func TestTestStoreRelease(t *testing.T) {
 		}
 	})
 
-	t.Run("happy path", func(t *testing.T) {
+	t.Run("adding a release", func(t *testing.T) {
 		var applied *v1alpha1.GitHubRepository
 		s := &callbackServer{
 			patcher: &mockPatcher{
@@ -50,7 +50,7 @@ func TestTestStoreRelease(t *testing.T) {
 			Name: "fake-release",
 		}
 
-		if err := s.storeRelease(hook, release, false); err != nil {
+		if err := s.storeRelease(hook, release, true); err != nil {
 			t.Error("Did not expect store release to error on happy path")
 		}
 
@@ -60,6 +60,38 @@ func TestTestStoreRelease(t *testing.T) {
 
 		if applied.Status.Releases[0].Name != release.Name {
 			t.Error("Wrong release stored")
+		}
+	})
+
+	t.Run("removing a release", func(t *testing.T) {
+		var applied *v1alpha1.GitHubRepository
+		s := &callbackServer{
+			patcher: &mockPatcher{
+				getFn: func(obj interface{}, ns, name string) error {
+					getter := obj.(*v1alpha1.GitHubRepository)
+					getter.Status.Releases = []v1alpha1.GitHubRelease{
+						{
+							Name: "delete-release",
+						},
+					}
+					return nil
+				},
+				applyFn: func(obj runtime.Object, opt ...patcher.OptionFunc) ([]byte, error) {
+					applied = obj.(*v1alpha1.GitHubRepository)
+					return nil, nil
+				},
+			},
+		}
+		release := &v1alpha1.GitHubRelease{
+			Name: "delete-release",
+		}
+
+		if err := s.storeRelease(hook, release, false); err != nil {
+			t.Errorf("Did not expect an error, got '%s'", err)
+		}
+
+		if len(applied.Status.Releases) != 0 {
+			t.Error("Did not expect a release, got some")
 		}
 	})
 }
