@@ -46,11 +46,6 @@ func svcCommand(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := kubekit.CreateCRD(acs, svc.ImagePolicyResource); err != nil {
-		log.Printf("Could not create ImagePolicy CRD: %s\n", err)
-		return err
-	}
-
 	if err := kubekit.CreateCRD(acs, svc.HealthPolicyResource); err != nil {
 		log.Printf("Could not create HealthPolicy CRD: %s\n", err)
 		return err
