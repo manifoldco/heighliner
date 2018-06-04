@@ -98,6 +98,8 @@ RELEASE_NAME?=$(patsubst docker-%,%,$@)
 ifdef TRAVIS_PULL_REQUEST_BRANCH
 	RELEASE_VERSION=$(TRAVIS_PULL_REQUEST_SHA)
 	RELEASE_NAME="$(patsubst docker-%,%,$@)-$(shell echo $(TRAVIS_PULL_REQUEST_BRANCH) | sed "s/[^[:alnum:].-]/-/g")"
+	# Override VCS_BRANCH on travis because it uses the FETCH_HEAD
+	VCS_BRANCH=$(TRAVIS_PULL_REQUEST_BRANCH)
 endif
 
 $(CMDs:%=build/docker/%/Dockerfile):
