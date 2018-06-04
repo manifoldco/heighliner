@@ -1,6 +1,7 @@
 package networkpolicy
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
@@ -30,7 +31,7 @@ func TestNetworkStatus(t *testing.T) {
 		}
 
 		actualDomainURL := status.Domains[0].URL
-		expectedDomainURL := "my.cool.domain"
+		expectedDomainURL := "https://my.cool.domain"
 		if actualDomainURL != expectedDomainURL {
 			t.Errorf("Expected domain URL to be %s, got '%s'", expectedDomainURL, actualDomainURL)
 		}
@@ -57,16 +58,45 @@ func TestNetworkStatus(t *testing.T) {
 		}
 
 		actualFirstDomainURL := status.Domains[0].URL
-		expectedFirstDomainURL := "my.cool.domain"
+		expectedFirstDomainURL := "https://my.cool.domain"
 		if actualFirstDomainURL != expectedFirstDomainURL {
 			t.Errorf("Expected domain URL to be %s, got '%s'", expectedFirstDomainURL, actualFirstDomainURL)
 		}
 
 		actualSecondDomainURL := status.Domains[1].URL
-		expectedSecondDomainURL := "my.other.cool.domain"
+		expectedSecondDomainURL := "https://my.other.cool.domain"
 		if actualSecondDomainURL != expectedSecondDomainURL {
 			t.Errorf("Expected domain URL to be %s, got '%s'", expectedSecondDomainURL, actualSecondDomainURL)
 		}
 
+	})
+}
+
+func TestFullDomain(t *testing.T) {
+	t.Run("without TLS disabled", func(t *testing.T) {
+		domain := "my.cool.domain"
+		url := fmt.Sprintf("https://%s", domain)
+
+		dns := v1alpha1.ExternalDNS{
+			Domain: domain,
+		}
+
+		if actual := getFullURL(dns); actual != url {
+			t.Errorf("Expected url to be '%s', got '%s'", url, actual)
+		}
+	})
+
+	t.Run("with TLS disabled", func(t *testing.T) {
+		domain := "my.cool.domain"
+		url := fmt.Sprintf("http://%s", domain)
+
+		dns := v1alpha1.ExternalDNS{
+			Domain:     domain,
+			DisableTLS: true,
+		}
+
+		if actual := getFullURL(dns); actual != url {
+			t.Errorf("Expected url to be '%s', got '%s'", url, actual)
+		}
 	})
 }
