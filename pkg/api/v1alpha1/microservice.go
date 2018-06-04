@@ -32,6 +32,7 @@ type MicroserviceSpec struct {
 	AvailabilityPolicy v1.LocalObjectReference `json:"availabilityPolicy,omitempty"`
 	ConfigPolicy       v1.LocalObjectReference `json:"configPolicy,omitempty"`
 	SecurityPolicy     v1.LocalObjectReference `json:"securityPolicy,omitempty"`
+	HealthPolicy       v1.LocalObjectReference `json:"healthPolicy,omitempty"`
 }
 
 // MicroserviceStatus represents the status a specific Microservice is in.

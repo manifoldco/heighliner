@@ -24,7 +24,7 @@ type AvailabilityPolicy struct {
 type AvailabilityPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items           []NetworkPolicy `json:"items"`
+	Items           []AvailabilityPolicy `json:"items"`
 }
 
 // AvailabilityPolicySpec is the specification for Availability.

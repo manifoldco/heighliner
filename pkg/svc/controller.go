@@ -242,13 +242,23 @@ func (c *Controller) getContainers(crd *v1alpha1.Microservice, ip *v1alpha1.Imag
 		ipp = *ip.Spec.ImagePullPolicy
 	}
 
-	return []corev1.Container{
-		{
-			Name:            crd.Name,
-			Image:           release.Image,
-			ImagePullPolicy: ipp,
-		},
-	}, nil
+	healthPolicySpec, err := c.getHealthPolicySpec(crd)
+	if err != nil {
+		return nil, err
+	}
+
+	container := corev1.Container{
+		Name:            crd.Name,
+		Image:           release.Image,
+		ImagePullPolicy: ipp,
+	}
+
+	if healthPolicySpec != nil {
+		container.ReadinessProbe = healthPolicySpec.ReadinessProbe
+		container.LivenessProbe = healthPolicySpec.LivenessProbe
+	}
+
+	return []corev1.Container{container}, nil
 }
 
 func (c *Controller) getImagePolicy(crd *v1alpha1.Microservice) (*v1alpha1.ImagePolicy, error) {
@@ -336,6 +346,26 @@ func (c *Controller) getSecurityPolicySpec(crd *v1alpha1.Microservice) (*v1alpha
 	}
 
 	return &securityPolicy.Spec, nil
+}
+
+func (c *Controller) getHealthPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.HealthPolicySpec, error) {
+	healthPolicy := &v1alpha1.HealthPolicy{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "HealthPolicy",
+			APIVersion: "hlnr.io/v1alpha1",
+		},
+	}
+
+	apName := crd.Spec.HealthPolicy.Name
+	if apName == "" {
+		return nil, nil
+	}
+
+	if err := c.patcher.Get(healthPolicy, crd.Namespace, apName); err != nil {
+		return nil, err
+	}
+
+	return &healthPolicy.Spec, nil
 }
 
 type deleteClient interface {
