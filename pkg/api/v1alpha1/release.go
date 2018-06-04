@@ -26,6 +26,9 @@ type Release struct {
 	// SemVer is the SemVer release object linked to this Release if the
 	// VersioningPolicy associated with it is SemVer.
 	SemVer *SemVerRelease `json:"semVer,omitempty"`
+
+	// Source is where the release code comes from
+	Source *metav1.OwnerReference `json:"source"`
 }
 
 // String concatenates the Release values into a single unique string.

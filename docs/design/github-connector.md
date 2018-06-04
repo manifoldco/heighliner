@@ -26,7 +26,7 @@ below.
 ### API Token
 
 First, an API token will be needed if a CRD is set up. This [GitHub API Token](https://github.com/settings/tokens)
-should have the `admin:repo_hook` and `repo` permissions.
+should have the `admin:repo_hook` and `repo` permissions. Once you have a token you can manually add it to your secrets in development in the namespace that your app expects. The expected token key is `GITHUB_AUTH_TOKEN`
 
 ### Domain
 

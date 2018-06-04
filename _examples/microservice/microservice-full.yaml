@@ -17,6 +17,13 @@ spec:
   image: hlnr/hello-world
   versioningPolicy:
     name: release-minor
+  imagePullSecrets:
+  - name: helloworld-docker-registry
+  versioningPolicy:
+    name: release-minor
+  filter:
+    github:
+      name: hello-workd
 status:
   releases:
   - image: hlnr/hello-world:latest
@@ -52,7 +59,8 @@ kind: NetworkPolicy
 metadata:
   name: hello-world
 spec:
-  microservice: hello-world
+  microservice:
+    name: hello-world
   ports:
   - name: headless
     port: 80
