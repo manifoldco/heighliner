@@ -180,7 +180,7 @@ func syncSelectedRelease(cl patchClient, ms *v1alpha1.Microservice, networkPolic
 		return err
 	}
 
-	status, err := buildNetworkStatusForRelease(np, externalRelease)
+	status, err := buildNetworkStatusForRelease(ms, np, externalRelease)
 	if err != nil {
 		log.Printf("Error building Network Status for release %s: %s", name, err)
 		return err
