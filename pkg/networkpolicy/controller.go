@@ -8,7 +8,6 @@ import (
 	"syscall"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
-	"github.com/manifoldco/heighliner/pkg/k8sutils"
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
@@ -76,15 +75,7 @@ func (c *Controller) run(ctx context.Context) {
 				c.syncNetworking(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
-				ok, err := k8sutils.ShouldSync(old, new)
-				if err != nil {
-					cp := old.(*v1alpha1.NetworkPolicy).DeepCopy()
-					log.Printf("Error syncing networkpolicy %s: %s:", cp.Name, err)
-				}
-
-				if ok {
-					c.syncNetworking(new)
-				}
+				c.syncNetworking(new)
 			},
 			DeleteFunc: func(obj interface{}) {
 				cp := obj.(*v1alpha1.NetworkPolicy).DeepCopy()

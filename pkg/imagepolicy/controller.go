@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
-	"github.com/manifoldco/heighliner/pkg/k8sutils"
 	"github.com/manifoldco/heighliner/pkg/registry"
 	"github.com/manifoldco/heighliner/pkg/registry/hub"
 
@@ -95,9 +94,7 @@ func (c *Controller) run(ctx context.Context) {
 				c.syncPolicy(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
-				if ok, err := k8sutils.ShouldSync(old, new); ok && err == nil {
-					c.syncPolicy(new)
-				}
+				c.syncPolicy(new)
 			},
 			DeleteFunc: func(obj interface{}) {
 				cp := obj.(*v1alpha1.ImagePolicy).DeepCopy()
