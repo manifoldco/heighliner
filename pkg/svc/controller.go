@@ -2,7 +2,6 @@ package svc
 
 import (
 	"context"
-	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -266,10 +265,6 @@ func (c *Controller) getImagePolicy(crd *v1alpha1.Microservice) (*v1alpha1.Image
 	ipName := crd.Spec.ImagePolicy.Name
 	if err := c.patcher.Get(imagePolicy, crd.Namespace, ipName); err != nil {
 		return nil, err
-	}
-
-	if len(imagePolicy.Status.Releases) == 0 {
-		return nil, errors.New("Need a release to be set in the ImagePolicy Status")
 	}
 
 	return imagePolicy, nil
