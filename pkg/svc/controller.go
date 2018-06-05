@@ -78,9 +78,7 @@ func (c *Controller) run(ctx context.Context) {
 				c.patchMicroservice(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
-				if ok, err := k8sutils.ShouldSync(old, new); ok && err == nil {
-					c.patchMicroservice(new)
-				}
+				c.patchMicroservice(new)
 			},
 			DeleteFunc: func(obj interface{}) {
 				svc := obj.(*v1alpha1.Microservice).DeepCopy()
@@ -153,6 +151,7 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 
 	// new release objects, store them
 	svc.Status.Releases = deployedReleases
+
 	// need to specify types again until we resolve the mapping issue
 	svc.TypeMeta = metav1.TypeMeta{
 		Kind:       "Microservice",

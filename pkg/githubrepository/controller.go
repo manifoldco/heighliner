@@ -117,9 +117,7 @@ func (c *Controller) run(ctx context.Context) {
 				c.syncPolicy(obj)
 			},
 			UpdateFunc: func(old, new interface{}) {
-				if ok, err := k8sutils.ShouldSync(old, new); ok && err == nil {
-					c.syncPolicy(new)
-				}
+				c.syncPolicy(new)
 			},
 			DeleteFunc: func(obj interface{}) {
 				cp := obj.(*v1alpha1.GitHubRepository).DeepCopy()
