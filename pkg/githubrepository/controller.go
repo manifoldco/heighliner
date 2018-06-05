@@ -26,11 +26,6 @@ import (
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
-func init() {
-	// let's not hit rate limits
-	kubekit.ResyncPeriod = 30 * time.Second
-}
-
 // Controller will take care of syncing the internal status of the GitHub Policy
 // object with the available releases on GitHub.
 type Controller struct {
@@ -58,6 +53,11 @@ const authTokenKey = "GITHUB_AUTH_TOKEN"
 
 // NewController returns a new GitHubRepository Controller.
 func NewController(rcfg *rest.Config, cs kubernetes.Interface, namespace string, cfg Config) (*Controller, error) {
+	// Let's not hit rate limits.
+	// This is done here instead of an init function so we don't override the
+	// global settings for other controllers.
+	kubekit.ResyncPeriod = 30 * time.Second
+
 	rc, err := kubekit.RESTClient(rcfg, &v1alpha1.SchemeGroupVersion, v1alpha1.AddToScheme)
 	if err != nil {
 		return nil, err
