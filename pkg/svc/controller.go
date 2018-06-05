@@ -383,7 +383,8 @@ func deprecateReleases(cl deleteClient, crd *v1alpha1.Microservice, desired []v1
 				APIVersion: "hlnr.io/v1alpha1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
+				Name:      name,
+				Namespace: crd.Namespace,
 			},
 		}
 
