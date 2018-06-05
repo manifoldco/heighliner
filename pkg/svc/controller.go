@@ -2,7 +2,6 @@ package svc
 
 import (
 	"context"
-	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -106,25 +105,19 @@ func (c *Controller) patchMicroservice(obj interface{}) error {
 		vsvc, err := c.getVersionedMicroservice(svc, imagePolicy, &release)
 		if err != nil {
 			log.Printf("Error generating the VersionedMicroservice object error=%s", err)
-			// we don't need to return the error here, we want to be able to
-			// deploy other releases still
-			continue
+			return err
 		}
 
 		patch, err := c.patcher.Apply(vsvc)
 		if err != nil {
 			log.Printf("Error applying VersionedMicroservice error=%s", err)
-			// we don't need to return the error here, we want to be able to
-			// deploy other releases still
-			continue
+			return err
 		}
 
 		// refresh the vsvc
 		if err := c.patcher.Get(vsvc, vsvc.Namespace, vsvc.Name); err != nil {
 			log.Printf("Error refreshing VersionedMicroservice: %s", err)
-			// we don't need to return the error here, we want to be able to
-			// deploy other releases still
-			continue
+			return err
 		}
 
 		// Add OwnerReference to Release. We can use this later on to link to
@@ -274,10 +267,6 @@ func (c *Controller) getImagePolicy(crd *v1alpha1.Microservice) (*v1alpha1.Image
 		return nil, err
 	}
 
-	if len(imagePolicy.Status.Releases) == 0 {
-		return nil, errors.New("Need a release to be set in the ImagePolicy Status")
-	}
-
 	return imagePolicy, nil
 }
 
@@ -383,12 +372,13 @@ func deprecateReleases(cl deleteClient, crd *v1alpha1.Microservice, desired []v1
 				APIVersion: "hlnr.io/v1alpha1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
+				Name:      name,
+				Namespace: crd.Namespace,
 			},
 		}
 
 		if err := cl.Delete(svc); err != nil {
-			log.Printf("Could not delete VersionedMicroservice %s: %s", name, err)
+			return err
 		}
 	}
 

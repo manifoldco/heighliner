@@ -105,7 +105,6 @@ func (r *SemVerRelease) fullName() string {
 // ReleaseValidationSchema represents the OpenAPIv3 validation schema for a
 // release object.
 var ReleaseValidationSchema = v1beta1.JSONSchemaProps{
-	Required: []string{"releases"},
 	Properties: map[string]v1beta1.JSONSchemaProps{
 		"releases": {
 			Required: []string{"semVer", "image", "released"},
