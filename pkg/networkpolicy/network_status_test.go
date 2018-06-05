@@ -14,6 +14,8 @@ func TestNetworkStatus(t *testing.T) {
 		},
 	}
 
+	ms := &v1alpha1.Microservice{}
+
 	t.Run("with a single domain network policy", func(t *testing.T) {
 		np := &v1alpha1.NetworkPolicy{
 			Spec: v1alpha1.NetworkPolicySpec{
@@ -25,7 +27,7 @@ func TestNetworkStatus(t *testing.T) {
 			},
 		}
 
-		status, _ := buildNetworkStatusForRelease(np, release)
+		status, _ := buildNetworkStatusForRelease(ms, np, release)
 		if len(status.Domains) != 1 {
 			t.Errorf("Expected status domains to be of length 1, got '%d'", len(status.Domains))
 		}
@@ -52,7 +54,7 @@ func TestNetworkStatus(t *testing.T) {
 			},
 		}
 
-		status, _ := buildNetworkStatusForRelease(np, release)
+		status, _ := buildNetworkStatusForRelease(ms, np, release)
 		if len(status.Domains) != 2 {
 			t.Errorf("Expected status domains to be of length 2, got '%d'", len(status.Domains))
 		}
