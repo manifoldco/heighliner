@@ -458,6 +458,7 @@ func createGitHubDeployment(ctx context.Context, cl deploymentClient, repo *v1al
 			Description:          k8sutils.PtrString("Heighliner Deployment"),
 			Ref:                  k8sutils.PtrString(release.Tag),
 			TransientEnvironment: k8sutils.PtrBool(release.Name != repo.Spec.Repo),
+			Environment:          release.Deployment.URL,
 			RequiredContexts:     &[]string{},
 		}
 
