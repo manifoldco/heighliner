@@ -413,7 +413,10 @@ func (c *Controller) syncDeployment(obj interface{}, deleted bool) {
 	}
 
 	// Fix the network policy reference. reconciliation doesn't care about it.
-	npr := v1.LocalObjectReference{Name: np.Name}
+	npr := v1.ObjectReference{
+		Name:      np.Name,
+		Namespace: np.Namespace,
+	}
 	for i := range newReleases {
 		if newReleases[i].Deployment != nil {
 			newReleases[i].Deployment.NetworkPolicy = npr

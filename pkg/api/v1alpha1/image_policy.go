@@ -29,7 +29,7 @@ type ImagePolicySpec struct {
 	Image            string                    `json:"image"`
 	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets"`
 	ImagePullPolicy  *v1.PullPolicy            `json:"imagePullPolicy"`
-	VersioningPolicy v1.LocalObjectReference   `json:"versioningPolicy"`
+	VersioningPolicy v1.ObjectReference        `json:"versioningPolicy"`
 	Filter           ImagePolicyFilter         `json:"filter"`
 }
 
@@ -43,7 +43,7 @@ type ImagePolicyStatus struct {
 
 // ImagePolicyFilter will define how we can filter where images come from
 type ImagePolicyFilter struct {
-	GitHub *v1.LocalObjectReference `json:"github,omitempty"`
+	GitHub *v1.ObjectReference `json:"github,omitempty"`
 }
 
 // ImagePolicyValidationSchema represents the OpenAPIV3Schema validation for

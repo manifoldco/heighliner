@@ -156,7 +156,13 @@ func getGithubRepository(cl patchClient, ip *v1alpha1.ImagePolicy) (*v1alpha1.Gi
 		},
 	}
 
-	if err := cl.Get(githubRepository, ip.Namespace, ip.Spec.Filter.GitHub.Name); err != nil {
+	ghName := ip.Spec.Filter.GitHub.Name
+	ghNamespace := ip.Spec.Filter.GitHub.Name
+	if ghNamespace == "" {
+		ghNamespace = ip.Namespace
+	}
+
+	if err := cl.Get(githubRepository, ghNamespace, ghName); err != nil {
 		return nil, err
 	}
 

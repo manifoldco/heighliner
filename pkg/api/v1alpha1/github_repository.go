@@ -83,10 +83,10 @@ type GitHubRelease struct {
 // Deployment represents a linking between a GitHub deployment and a network
 // policy. Through the release information we can determine a specific domain.
 type Deployment struct {
-	ID            *int64                      `json:"deployment"`
-	NetworkPolicy corev1.LocalObjectReference `json:"networkPolicy"`
-	State         string                      `json:"state"`
-	URL           *string                     `json:"url,omitempty"`
+	ID            *int64                 `json:"deployment"`
+	NetworkPolicy corev1.ObjectReference `json:"networkPolicy"`
+	State         string                 `json:"state"`
+	URL           *string                `json:"url,omitempty"`
 }
 
 // GitHubRepositoryValidationSchema represents the OpenAPIV3Schema

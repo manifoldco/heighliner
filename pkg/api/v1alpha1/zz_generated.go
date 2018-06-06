@@ -645,7 +645,7 @@ func (in *ImagePolicyFilter) DeepCopyInto(out *ImagePolicyFilter) {
 		if *in == nil {
 			*out = nil
 		} else {
-			*out = new(v1.LocalObjectReference)
+			*out = new(v1.ObjectReference)
 			**out = **in
 		}
 	}
@@ -856,8 +856,8 @@ func (in *MicroserviceList) DeepCopyObject() runtime.Object {
 func (in *MicroserviceSpec) DeepCopyInto(out *MicroserviceSpec) {
 	*out = *in
 	out.ImagePolicy = in.ImagePolicy
-	out.AvailabilityPolicy = in.AvailabilityPolicy
 	out.ConfigPolicy = in.ConfigPolicy
+	out.AvailabilityPolicy = in.AvailabilityPolicy
 	out.SecurityPolicy = in.SecurityPolicy
 	out.HealthPolicy = in.HealthPolicy
 	return
