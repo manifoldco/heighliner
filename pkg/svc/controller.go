@@ -282,7 +282,12 @@ func (c *Controller) getAvailabilityPolicySpec(crd *v1alpha1.Microservice) (*v1a
 		return nil, nil
 	}
 
-	if err := c.patcher.Get(availabilityPolicy, crd.Namespace, apName); err != nil {
+	apNamespace := crd.Spec.AvailabilityPolicy.Namespace
+	if apName == "" {
+		apNamespace = crd.Namespace
+	}
+
+	if err := c.patcher.Get(availabilityPolicy, apNamespace, apName); err != nil {
 		return nil, err
 	}
 
@@ -324,12 +329,17 @@ func (c *Controller) getSecurityPolicySpec(crd *v1alpha1.Microservice) (*v1alpha
 		},
 	}
 
-	apName := crd.Spec.SecurityPolicy.Name
-	if apName == "" {
+	spName := crd.Spec.SecurityPolicy.Name
+	if spName == "" {
 		return nil, nil
 	}
 
-	if err := c.patcher.Get(securityPolicy, crd.Namespace, apName); err != nil {
+	spNamespace := crd.Spec.SecurityPolicy.Namespace
+	if spNamespace == "" {
+		spNamespace = crd.Namespace
+	}
+
+	if err := c.patcher.Get(securityPolicy, spNamespace, spName); err != nil {
 		return nil, err
 	}
 
@@ -349,7 +359,12 @@ func (c *Controller) getHealthPolicySpec(crd *v1alpha1.Microservice) (*v1alpha1.
 		return nil, nil
 	}
 
-	if err := c.patcher.Get(healthPolicy, crd.Namespace, apName); err != nil {
+	hpNamespace := crd.Spec.HealthPolicy.Namespace
+	if hpNamespace == "" {
+		hpNamespace = crd.Namespace
+	}
+
+	if err := c.patcher.Get(healthPolicy, hpNamespace, apName); err != nil {
 		return nil, err
 	}
 

@@ -57,7 +57,7 @@ func TestFilterImages(t *testing.T) {
 				Spec: v1alpha1.ImagePolicySpec{
 					Image: "manifoldco/heighliner",
 					Filter: v1alpha1.ImagePolicyFilter{
-						GitHub: &v1.LocalObjectReference{
+						GitHub: &v1.ObjectReference{
 							Name: "github.com/manifoldco/heighliner",
 						},
 					},

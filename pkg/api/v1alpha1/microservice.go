@@ -28,11 +28,14 @@ type MicroserviceList struct {
 // MicroserviceSpec represents the specification for a Microservice. It houses
 // all the policies which we'll use to build a VersionedMicroservice.
 type MicroserviceSpec struct {
-	ImagePolicy        v1.LocalObjectReference `json:"imagePolicy"`
-	AvailabilityPolicy v1.LocalObjectReference `json:"availabilityPolicy,omitempty"`
-	ConfigPolicy       v1.LocalObjectReference `json:"configPolicy,omitempty"`
-	SecurityPolicy     v1.LocalObjectReference `json:"securityPolicy,omitempty"`
-	HealthPolicy       v1.LocalObjectReference `json:"healthPolicy,omitempty"`
+	// Local object references, microservice specific
+	ImagePolicy  v1.LocalObjectReference `json:"imagePolicy"`
+	ConfigPolicy v1.LocalObjectReference `json:"configPolicy,omitempty"`
+
+	// Global Object References, not Microservice specific.
+	AvailabilityPolicy v1.ObjectReference `json:"availabilityPolicy,omitempty"`
+	SecurityPolicy     v1.ObjectReference `json:"securityPolicy,omitempty"`
+	HealthPolicy       v1.ObjectReference `json:"healthPolicy,omitempty"`
 }
 
 // MicroserviceStatus represents the status a specific Microservice is in.
