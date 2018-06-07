@@ -157,7 +157,7 @@ func getGithubRepository(cl patchClient, ip *v1alpha1.ImagePolicy) (*v1alpha1.Gi
 	}
 
 	ghName := ip.Spec.Filter.GitHub.Name
-	ghNamespace := ip.Spec.Filter.GitHub.Name
+	ghNamespace := ip.Spec.Filter.GitHub.Namespace
 	if ghNamespace == "" {
 		ghNamespace = ip.Namespace
 	}

@@ -398,7 +398,13 @@ func (c *Controller) syncDeployment(obj interface{}, deleted bool) {
 			APIVersion: "hlnr.io/v1alpha1",
 		},
 	}
-	if err := c.patcher.Get(&ghr, msvc.Namespace, ip.Spec.Filter.GitHub.Name); err != nil {
+
+	ghNamespace := ip.Spec.Filter.GitHub.Namespace
+	if ghNamespace == "" {
+		ghNamespace = msvc.Namespace
+	}
+
+	if err := c.patcher.Get(&ghr, ghNamespace, ip.Spec.Filter.GitHub.Name); err != nil {
 		log.Print("Error fetching GitHubRepository:", err)
 		return
 	}

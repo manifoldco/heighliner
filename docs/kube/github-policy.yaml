@@ -4,11 +4,20 @@ metadata:
   name: heighliner:github-repository
 rules:
   - apiGroups: ["hlnr.io"]
-    resources: ["githubpolicies"]
+    resources:
+    - "networkpolicies"
+    - "githubrepositories"
+    - "imagepolicies"
     verbs: ["*"]
+  - apiGroups: ["hlnr.io"]
+    resources: ["microservices"]
+    verbs: ["get", "list"]
   - apiGroups: ["apiextensions.k8s.io"]
     resources: ["customresourcedefinitions"]
     verbs: ["*"]
+  - apiGroups:  [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
 
 ---
 
