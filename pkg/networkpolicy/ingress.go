@@ -27,7 +27,10 @@ func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolic
 
 	domains := make([]string, len(np.Spec.ExternalDNS))
 	for i, record := range np.Spec.ExternalDNS {
-		domains[i] = record.Domain
+		var err error
+		if domains[i], err = templatedDomain(ms, release, record.Domain); err != nil {
+			return nil, err
+		}
 	}
 
 	labels := k8sutils.Labels(np.Labels, np.ObjectMeta)
