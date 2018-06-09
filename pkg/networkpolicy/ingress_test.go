@@ -4,8 +4,73 @@ import (
 	"testing"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestBuildIngressForRelease(t *testing.T) {
+	ms := &v1alpha1.Microservice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "hello-world",
+		},
+	}
+
+	release := &v1alpha1.Release{
+		SemVer: &v1alpha1.SemVerRelease{
+			Name: "hello-world",
+		},
+	}
+
+	np := &v1alpha1.NetworkPolicy{}
+
+	srv := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind: "Service",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "srv",
+		},
+	}
+
+	t.Run("Sets OwnerReference to the service", func(t *testing.T) {
+		np := &v1alpha1.NetworkPolicy{
+			Spec: v1alpha1.NetworkPolicySpec{
+				ExternalDNS: []v1alpha1.ExternalDNS{
+					{Domain: "fake.fake"},
+				},
+			},
+		}
+
+		ing, err := buildIngressForRelease(ms, np, release, srv)
+		if err != nil {
+			t.Error("Expected no err. got:", err)
+		}
+
+		if len(ing.OwnerReferences) != 1 {
+			t.Error("Wrong number of owners:", len(ing.OwnerReferences))
+		}
+
+		if ing.OwnerReferences[0].Name != srv.Name ||
+			ing.OwnerReferences[0].Kind != srv.Kind ||
+			ing.OwnerReferences[0].Controller == nil ||
+			!*ing.OwnerReferences[0].Controller {
+
+			t.Error("Bad OwnerReference seen. got", ing.OwnerReferences)
+		}
+	})
+
+	t.Run("It is nil with no external dns", func(t *testing.T) {
+
+		ing, err := buildIngressForRelease(ms, np, release, srv)
+		if err != nil {
+			t.Error("Expected no err. got:", err)
+		}
+
+		if ing != nil {
+			t.Error("Expected no ingress. got:", ing)
+		}
+	})
+}
 
 func TestTemplatedDomain(t *testing.T) {
 	release := &v1alpha1.Release{

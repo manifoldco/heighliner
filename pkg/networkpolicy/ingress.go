@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jelmersnoeck/kubekit"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
 	"k8s.io/api/extensions/v1beta1"
@@ -13,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (*v1beta1.Ingress, error) {
+func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release, srv metav1.Object) (*v1beta1.Ingress, error) {
 	if len(np.Spec.ExternalDNS) == 0 {
 		return nil, nil
 	}
@@ -66,11 +67,16 @@ func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolic
 			APIVersion: "extensions/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            release.FullName(ms.Name),
-			Namespace:       ms.Namespace,
-			Labels:          labels,
-			Annotations:     annotations,
-			OwnerReferences: release.OwnerReferences,
+			Name:        release.FullName(ms.Name),
+			Namespace:   ms.Namespace,
+			Labels:      labels,
+			Annotations: annotations,
+			OwnerReferences: []metav1.OwnerReference{
+				*metav1.NewControllerRef(
+					srv,
+					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(srv)),
+				),
+			},
 		},
 		Spec: v1beta1.IngressSpec{
 			TLS:   ingressTLS,

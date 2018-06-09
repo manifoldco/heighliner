@@ -11,6 +11,8 @@ import (
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -98,12 +100,12 @@ func (c *Controller) syncNetworking(obj interface{}) error {
 
 	releaseGroups := groupReleases(ms.Name, ms.Status.Releases)
 	for name, releaseGroup := range releaseGroups {
-		if err := syncReleaseGroup(c.patcher, ms, np, releaseGroup); err != nil {
+		if err := syncReleaseGroup(c.cs, c.patcher, ms, np, releaseGroup); err != nil {
 			log.Printf("Error syncing release '%s': %s", name, err)
 			continue
 		}
 
-		if err := syncSelectedRelease(c.patcher, ms, np, releaseGroup); err != nil {
+		if err := syncSelectedRelease(c.cs, c.patcher, ms, np, releaseGroup); err != nil {
 			log.Printf("Error syncing selected release '%s': %s", name, err)
 			continue
 		}
@@ -117,31 +119,24 @@ func (c *Controller) syncNetworking(obj interface{}) error {
 }
 
 type patchClient interface {
+	getClient
 	Apply(runtime.Object, ...patcher.OptionFunc) ([]byte, error)
 }
 
-func syncReleaseGroup(cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+func syncReleaseGroup(cs kubernetes.Interface, cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
 	if len(np.Spec.Ports) != 0 {
 		for _, release := range releases {
-			svc, err := buildServiceForRelease(svc, np, &release, true)
+			_, err := createOrReplaceService(cs, cl, svc, np, &release, release.FullName(svc.Name))
 			if err != nil {
 				return err
 			}
-
-			// we don't always want a service for each release
-			if svc == nil {
-				return nil
-			}
-
-			_, err = cl.Apply(svc)
-			return err
 		}
 	}
 
 	return nil
 }
 
-func syncSelectedRelease(cl patchClient, ms *v1alpha1.Microservice, networkPolicy *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+func syncSelectedRelease(cs kubernetes.Interface, cl patchClient, ms *v1alpha1.Microservice, networkPolicy *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
 	np := networkPolicy.DeepCopy()
 	if len(np.Spec.ExternalDNS) == 0 {
 		return nil
@@ -158,18 +153,12 @@ func syncSelectedRelease(cl patchClient, ms *v1alpha1.Microservice, networkPolic
 		return err
 	}
 
-	svc, err := buildServiceForRelease(ms, np, externalRelease, false)
+	srv, err := createOrReplaceService(cs, cl, ms, np, externalRelease, ms.Name)
 	if err != nil {
-		log.Printf("Error creating service for release %s: %s", name, err)
 		return err
 	}
 
-	if _, err := cl.Apply(svc); err != nil {
-		log.Printf("Error syncing service for release %s: %s", name, err)
-		return err
-	}
-
-	ing, err := buildIngressForRelease(ms, np, externalRelease)
+	ing, err := buildIngressForRelease(ms, np, externalRelease, srv)
 	if err != nil {
 		log.Printf("Error building Ingress for %s: %s", name, err)
 		return err
@@ -200,6 +189,47 @@ func syncSelectedRelease(cl patchClient, ms *v1alpha1.Microservice, networkPolic
 	return nil
 }
 
+// createOrReplaceService will either create a new service instance, or do a full
+// replacement of one if it exists, performing changes on the existing one.
+// it does not use PATCH, as we need to fully replace the OwnerReferences.
+func createOrReplaceService(cs kubernetes.Interface, cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release, srvName string) (*v1.Service, error) {
+	if len(np.Spec.Ports) == 0 {
+		return nil, nil
+	}
+
+	srv := &v1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      srvName,
+			Namespace: svc.Namespace,
+		},
+	}
+
+	var create bool
+	err := cl.Get(srv, srv.Namespace, srv.Name) // ignore errors, and let the PUT fail
+	switch {
+	case errors.IsNotFound(err):
+		create = true
+	case err != nil:
+		log.Printf("Error fetching service for release %s: %s", np.Name, err)
+		return nil, err
+	}
+	srv = buildServiceForRelease(srv, svc, np, release)
+
+	if create {
+		srv, err = cs.Core().Services(srv.Namespace).Create(srv)
+	} else {
+		srv, err = cs.Core().Services(srv.Namespace).Update(srv)
+	}
+	if err != nil {
+		log.Printf("Error syncing service for release %s: %s", np.Name, err)
+	}
+
+	return srv, err
+}
 func groupReleases(name string, releases []v1alpha1.Release) map[string][]v1alpha1.Release {
 	grouped := map[string][]v1alpha1.Release{}
 
