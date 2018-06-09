@@ -1,7 +1,7 @@
 PKG=github.com/manifoldco/heighliner
 API_VERSIONS=$(sort $(patsubst pkg/api/%/,%,$(dir $(wildcard pkg/api/*/))))
 
-ci: lint test release
+ci: lint cover release
 .PHONY: ci
 
 #################################################
@@ -41,6 +41,9 @@ METALINT=gometalinter --tests --disable-all --vendor --deadline=5m -e "zz_.*\.go
 
 test: vendor
 	CGO_ENABLED=0 go test -v ./...
+
+cover: vendor
+	CGO_ENABLED=0 go test -v -coverprofile=coverage.txt -covermode=atomic ./...
 
 lint: $(LINTERS)
 
