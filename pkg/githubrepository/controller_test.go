@@ -52,38 +52,22 @@ func TestGetSecretAuthToken(t *testing.T) {
 }
 
 func TestCreateDeployment(t *testing.T) {
-	dplID := int64(1234)
+	repo := &v1alpha1.GitHubRepository{
+		Spec: v1alpha1.GitHubRepositorySpec{
+			Owner: "manifoldco",
+			Repo:  "heighliner",
+		},
+	}
+
+	release := v1alpha1.GitHubRelease{
+		Deployment: &v1alpha1.Deployment{
+			URL:   k8sutils.PtrString("my-url"),
+			State: "success",
+		},
+	}
+
 	t.Run("with a successful request", func(t *testing.T) {
-		cl := &dummyDeploymentClient{
-			f: func(ctx context.Context, owner, repo string, request *github.DeploymentRequest) (*github.Deployment, *github.Response, error) {
-				dpl := &github.Deployment{
-					ID: &dplID,
-				}
-				return dpl, nil, nil
-			},
-
-			sf: func(ctx context.Context, owner, repo string, id int64, request *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error) {
-				if id != dplID {
-					t.Errorf("Wrong ID supplied to deployment status")
-				}
-
-				status := &github.DeploymentStatus{}
-				return status, nil, nil
-			},
-		}
-
-		repo := &v1alpha1.GitHubRepository{
-			Spec: v1alpha1.GitHubRepositorySpec{
-				Owner: "manifoldco",
-				Repo:  "heighliner",
-			},
-		}
-
-		release := v1alpha1.GitHubRelease{
-			Deployment: &v1alpha1.Deployment{
-				URL: k8sutils.PtrString("my-url"),
-			},
-		}
+		cl := defaultDummyDeploymentClient(t)
 
 		id, err := createGitHubDeployment(context.Background(), cl, repo, release)
 		if err != nil {
@@ -94,11 +78,35 @@ func TestCreateDeployment(t *testing.T) {
 			t.Errorf("Expected id to equal '1234', got '%d'", id)
 		}
 	})
+
+	t.Run("With existing matching status", func(t *testing.T) {
+		cl := defaultDummyDeploymentClient(t)
+
+		cl.sf = func(context.Context, string, string, int64, *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error) {
+			t.Errorf("Status creation should not have been called.")
+			return nil, nil, nil
+		}
+
+		cl.lf = func(context.Context, string, string, int64, *github.ListOptions) ([]*github.DeploymentStatus, *github.Response, error) {
+			return []*github.DeploymentStatus{{State: k8sutils.PtrString("success")}}, &github.Response{}, nil
+		}
+
+		id, err := createGitHubDeployment(context.Background(), cl, repo, release)
+		if err != nil {
+			t.Errorf("Expected no error, got '%s'", err)
+		}
+
+		if *id != int64(1234) {
+			t.Errorf("Expected id to equal '1234', got '%d'", id)
+		}
+
+	})
 }
 
 type dummyDeploymentClient struct {
 	f  func(context.Context, string, string, *github.DeploymentRequest) (*github.Deployment, *github.Response, error)
 	sf func(context.Context, string, string, int64, *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error)
+	lf func(context.Context, string, string, int64, *github.ListOptions) ([]*github.DeploymentStatus, *github.Response, error)
 }
 
 func (c *dummyDeploymentClient) CreateDeployment(ctx context.Context, owner, repo string, request *github.DeploymentRequest) (*github.Deployment, *github.Response, error) {
@@ -107,6 +115,37 @@ func (c *dummyDeploymentClient) CreateDeployment(ctx context.Context, owner, rep
 
 func (c *dummyDeploymentClient) CreateDeploymentStatus(ctx context.Context, owner, repo string, id int64, request *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error) {
 	return c.sf(ctx, owner, repo, id, request)
+}
+
+func (c *dummyDeploymentClient) ListDeploymentStatuses(ctx context.Context, owner, repo string, id int64, opt *github.ListOptions) ([]*github.DeploymentStatus, *github.Response, error) {
+	return c.lf(ctx, owner, repo, id, opt)
+}
+
+func defaultDummyDeploymentClient(t *testing.T) *dummyDeploymentClient {
+	dplID := int64(1234)
+
+	return &dummyDeploymentClient{
+		f: func(ctx context.Context, owner, repo string, request *github.DeploymentRequest) (*github.Deployment, *github.Response, error) {
+			dpl := &github.Deployment{
+				ID: &dplID,
+			}
+			return dpl, nil, nil
+		},
+
+		sf: func(ctx context.Context, owner, repo string, id int64, request *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error) {
+			if id != dplID {
+				t.Errorf("Wrong ID supplied to deployment status")
+			}
+
+			status := &github.DeploymentStatus{}
+			return status, nil, nil
+		},
+
+		lf: func(ctx context.Context, owner, repo string, id int64, opt *github.ListOptions) ([]*github.DeploymentStatus, *github.Response, error) {
+			return nil, &github.Response{}, nil
+		},
+	}
+
 }
 
 type dummyClient struct {
