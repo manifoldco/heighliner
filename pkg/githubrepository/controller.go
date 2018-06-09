@@ -47,6 +47,7 @@ type webhookClient interface {
 type deploymentClient interface {
 	CreateDeployment(context.Context, string, string, *github.DeploymentRequest) (*github.Deployment, *github.Response, error)
 	CreateDeploymentStatus(context.Context, string, string, int64, *github.DeploymentStatusRequest) (*github.DeploymentStatus, *github.Response, error)
+	ListDeploymentStatuses(context.Context, string, string, int64, *github.ListOptions) ([]*github.DeploymentStatus, *github.Response, error)
 }
 
 const authTokenKey = "GITHUB_AUTH_TOKEN"
@@ -476,12 +477,35 @@ func createGitHubDeployment(ctx context.Context, cl deploymentClient, repo *v1al
 		id = deploy.ID
 	}
 
-	// XXX: this has the potential to create duplicate statuses, if we've
-	// already made it, but not persisted. We could query first.
 	status := &github.DeploymentStatusRequest{
 		AutoInactive:   k8sutils.PtrBool(false), // we control ageing these off
 		State:          &release.Deployment.State,
 		EnvironmentURL: release.Deployment.URL,
+	}
+
+	// Check the last status to see if we need to create a new one.
+	opt := &github.ListOptions{PerPage: 10}
+	var prevStatus *github.DeploymentStatus
+	for {
+		statuses, resp, err := cl.ListDeploymentStatuses(ctx, repo.Spec.Owner, repo.Spec.Repo, *id, opt)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(statuses) > 0 {
+			prevStatus = statuses[len(statuses)-1]
+		}
+
+		if resp.NextPage == 0 {
+			break
+		}
+
+		opt.Page = resp.NextPage
+	}
+
+	// XXX unfortunately we can't check the environment url.
+	if prevStatus != nil && prevStatus.GetState() == status.GetState() {
+		return id, nil
 	}
 
 	_, _, err := cl.CreateDeploymentStatus(ctx, repo.Spec.Owner, repo.Spec.Repo, *id, status)
