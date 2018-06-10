@@ -99,20 +99,35 @@ func (c *Controller) syncNetworking(obj interface{}) error {
 	}
 
 	releaseGroups := groupReleases(ms.Name, ms.Status.Releases)
+	if len(releaseGroups) == 0 {
+		log.Printf("No release groups to sync")
+		return nil
+	}
+
+	var newDomains []v1alpha1.Domain
 	for name, releaseGroup := range releaseGroups {
 		if err := syncReleaseGroup(c.cs, c.patcher, ms, np, releaseGroup); err != nil {
 			log.Printf("Error syncing release '%s': %s", name, err)
 			continue
 		}
 
-		if err := syncSelectedRelease(c.cs, c.patcher, ms, np, releaseGroup); err != nil {
+		domains, err := syncSelectedRelease(c.cs, c.patcher, ms, np, releaseGroup)
+		if err != nil {
 			log.Printf("Error syncing selected release '%s': %s", name, err)
 			continue
 		}
+
+		newDomains = append(newDomains, domains...)
 	}
 
-	if len(releaseGroups) == 0 {
-		log.Printf("No release groups to sync")
+	if statusDomainsEqual(np.Status.Domains, newDomains) {
+		return nil
+	}
+
+	np.Status.Domains = newDomains
+	if _, err := c.patcher.Apply(np); err != nil {
+		log.Printf("Error syncing NetworkStatus %s: %s", np.Name, err)
+		return err
 	}
 
 	return nil
@@ -136,11 +151,8 @@ func syncReleaseGroup(cs kubernetes.Interface, cl patchClient, svc *v1alpha1.Mic
 	return nil
 }
 
-func syncSelectedRelease(cs kubernetes.Interface, cl patchClient, ms *v1alpha1.Microservice, networkPolicy *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+func syncSelectedRelease(cs kubernetes.Interface, cl patchClient, ms *v1alpha1.Microservice, networkPolicy *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) ([]v1alpha1.Domain, error) {
 	np := networkPolicy.DeepCopy()
-	if len(np.Spec.ExternalDNS) == 0 {
-		return nil
-	}
 
 	// TODO(jelmer): this should come from a factory based on the update strategy.
 	releaser := &LatestReleaser{}
@@ -150,43 +162,26 @@ func syncSelectedRelease(cs kubernetes.Interface, cl patchClient, ms *v1alpha1.M
 	externalRelease, err := releaser.ExternalRelease(releases)
 	if err != nil {
 		log.Printf("Could not get ExternalRelease for %s: %s", name, err)
-		return err
+		return nil, err
 	}
 
 	srv, err := createOrReplaceService(cs, cl, ms, np, externalRelease, ms.Name)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ing, err := buildIngressForRelease(ms, np, externalRelease, srv)
 	if err != nil {
 		log.Printf("Error building Ingress for %s: %s", name, err)
-		return err
+		return nil, err
 	}
 
 	if _, err := cl.Apply(ing); err != nil {
 		log.Printf("Error syncing Ingress for release %s: %s", name, err)
-		return err
+		return nil, err
 	}
 
-	status, err := buildNetworkStatusForRelease(ms, np, externalRelease)
-	if err != nil {
-		log.Printf("Error building Network Status for release %s: %s", name, err)
-		return err
-	}
-
-	// need to specify types again until we resolve the mapping issue
-	np.TypeMeta = metav1.TypeMeta{
-		Kind:       "NetworkPolicy",
-		APIVersion: "hlnr.io/v1alpha1",
-	}
-	np.Status = status
-	if _, err := cl.Apply(np); err != nil {
-		log.Printf("Error syncing NetworkStatus for release %s: %s", name, err)
-		return err
-	}
-
-	return nil
+	return buildNetworkStatusDomainsForRelease(ms, np, externalRelease)
 }
 
 // createOrReplaceService will either create a new service instance, or do a full
