@@ -6,10 +6,8 @@ import (
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 )
 
-func buildNetworkStatusForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) (v1alpha1.NetworkPolicyStatus, error) {
-	ns := v1alpha1.NetworkPolicyStatus{
-		Domains: []v1alpha1.Domain{},
-	}
+func buildNetworkStatusDomainsForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) ([]v1alpha1.Domain, error) {
+	domains := []v1alpha1.Domain{}
 
 	for _, record := range np.Spec.ExternalDNS {
 		url, err := templatedDomain(ms, release, getFullURL(record))
@@ -22,10 +20,10 @@ func buildNetworkStatusForRelease(ms *v1alpha1.Microservice, np *v1alpha1.Networ
 			URL:    url,
 			SemVer: release.SemVer,
 		}
-		ns.Domains = append(ns.Domains, domain)
+		domains = append(domains, domain)
 	}
 
-	return ns, nil
+	return domains, nil
 }
 
 func getFullURL(dns v1alpha1.ExternalDNS) string {
@@ -35,4 +33,37 @@ func getFullURL(dns v1alpha1.ExternalDNS) string {
 	}
 
 	return fmt.Sprintf("%s%s", scheme, dns.Domain)
+}
+
+func statusDomainsEqual(old, new []v1alpha1.Domain) bool {
+	if len(old) != len(new) {
+		return false
+	}
+
+oldLoop:
+	for _, o := range old {
+		for _, n := range new {
+			if o.URL != n.URL {
+				continue
+			}
+
+			if o.SemVer == nil && n.SemVer != nil ||
+				o.SemVer != nil && n.SemVer == nil {
+				continue
+			}
+
+			if o.SemVer != nil &&
+				(o.SemVer.Name != n.SemVer.Name ||
+					o.SemVer.Version != n.SemVer.Version ||
+					o.SemVer.Build != n.SemVer.Build) {
+				continue
+			}
+
+			continue oldLoop // found a match!
+		}
+
+		return false // didn't find a match :(
+	}
+
+	return true
 }
