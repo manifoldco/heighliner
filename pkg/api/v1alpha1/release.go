@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -26,6 +25,9 @@ type Release struct {
 	// SemVer is the SemVer release object linked to this Release if the
 	// VersioningPolicy associated with it is SemVer.
 	SemVer *SemVerRelease `json:"semVer,omitempty"`
+
+	// Level is the detected maturity level for this release
+	Level SemVerLevel `json:"level"`
 }
 
 // String concatenates the Release values into a single unique string.
@@ -33,11 +35,36 @@ func (r Release) String() string {
 	return fmt.Sprintf("%s-%s", r.SemVer.String(), r.ReleaseTime)
 }
 
-// FullName creates the full name for a release. It takes the name of a
-// Microservice as a prefix.
-func (r Release) FullName(name string) string {
+// StreamName creates the release stream name for a release. It takes the name
+// of a Microservice as a prefix.
+//
+// Stream names are based on release level:
+//     release - `<prefix>`
+//     candidate - `<prefix>-rc`
+//     preview - `<prefix>-pr-<hash of branch/release name>
+func (r Release) StreamName(prefix string) string {
 	if r.SemVer != nil {
-		return hashedName(name, k8sutils.ShortHash(r.SemVer.fullName(), 5))
+		switch r.Level {
+		case SemVerLevelRelease:
+			return prefix
+		case SemVerLevelReleaseCandidate:
+			return fmt.Sprintf("%s-rc", prefix)
+		case SemVerLevelPreview:
+			return fmt.Sprintf("%s-pr-%s", prefix, k8sutils.ShortHash(r.SemVer.Name, 8))
+		default:
+			panic("Unknown SemVerLevel")
+		}
+	}
+
+	panic("No release type specified")
+}
+
+// FullName creates the full name for a release. This is the stream name
+// suffixed by a version derived hash.
+// Microservice as a prefix.
+func (r Release) FullName(prefix string) string {
+	if r.SemVer != nil {
+		return fmt.Sprintf("%s-%s", r.StreamName(prefix), k8sutils.ShortHash(r.SemVer.Version, 8))
 	}
 
 	panic("No release type specified")
@@ -50,10 +77,6 @@ func (r Release) Name() string {
 	}
 
 	panic("No release type specified")
-}
-
-func hashedName(name, appendix string) string {
-	return fmt.Sprintf("%s-%s", name, appendix)
 }
 
 // Version returns the version of the release.
@@ -75,28 +98,11 @@ type SemVerRelease struct {
 
 	// Version is the specific version for this release in a SemVer annotation.
 	Version string `json:"version"`
-
-	// Build is the specific build for a preview release for a specific version.
-	Build string `json:"build,omitempty"`
 }
 
 // String concatenates the SemVer Release values into a single unique string.
 func (r *SemVerRelease) String() string {
-	build := ""
-	if r.Build != "" {
-		build = fmt.Sprintf("-%s", r.Build)
-	}
-
-	return fmt.Sprintf("%s-%s%s", r.Name, r.Version, build)
-}
-
-func (r *SemVerRelease) fullName() string {
-	build := ""
-	if r.Build != "" {
-		build = fmt.Sprintf("-%s", r.Build)
-	}
-
-	return strings.ToLower(fmt.Sprintf("%s-%s%s", r.Name, r.Version, build))
+	return fmt.Sprintf("%s-%s", r.Name, r.Version)
 }
 
 // ReleaseValidationSchema represents the OpenAPIv3 validation schema for a

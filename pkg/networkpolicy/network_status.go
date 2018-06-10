@@ -54,8 +54,7 @@ oldLoop:
 
 			if o.SemVer != nil &&
 				(o.SemVer.Name != n.SemVer.Name ||
-					o.SemVer.Version != n.SemVer.Version ||
-					o.SemVer.Build != n.SemVer.Build) {
+					o.SemVer.Version != n.SemVer.Version) {
 				continue
 			}
 

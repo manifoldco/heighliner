@@ -74,8 +74,9 @@ type ExternalDNS struct {
 
 	// The domain name that will be linked to the service. This can be a full
 	// fledged domain like `dashboard.heighliner.com` or it could be a templated
-	// domain like `{.Version}.{.Name}.pr.heighliner.com`. Templated domains get
-	// the data from a Release object, possible values are `Version` and `Name`.
+	// domain like `{.Fullname}.pr.heighliner.com`. Templated domains get
+	// the data from a Release object, possible values are `Name` and
+	// `FullName`.
 	Domain string `json:"domain"`
 
 	// TTL in seconds for the DNS entry, defaults to `300`.

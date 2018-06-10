@@ -18,6 +18,7 @@ func TestDeprecatedReleases(t *testing.T) {
 					Name:    "my-test1",
 					Version: "1.2.3",
 				},
+				Level:       v1alpha1.SemVerLevelRelease,
 				ReleaseTime: released,
 			},
 			{
@@ -25,6 +26,7 @@ func TestDeprecatedReleases(t *testing.T) {
 					Name:    "my-test1",
 					Version: "1.2.4",
 				},
+				Level:       v1alpha1.SemVerLevelRelease,
 				ReleaseTime: released,
 			},
 		}
@@ -42,6 +44,7 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.3",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 				{
@@ -49,6 +52,7 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 			}
@@ -59,6 +63,7 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.2",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 				{
@@ -66,6 +71,7 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.3",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 				{
@@ -73,6 +79,7 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 			}
@@ -89,6 +96,7 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.3",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 				{
@@ -96,6 +104,7 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 			}
@@ -106,6 +115,7 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 			}
@@ -121,7 +131,7 @@ func TestDeprecateReleases(t *testing.T) {
 	cl := &kubekitClient{}
 	cl.deleteFunc = func(obj runtime.Object, objs ...patcher.OptionFunc) error {
 		vsvc := obj.(*v1alpha1.VersionedMicroservice)
-		expected := "test-service-9d641053af"
+		expected := "test-service-1mpl3547"
 		if vsvc.Name != expected {
 			t.Errorf("Expected name to be '%s', got '%s'", expected, vsvc.Name)
 		}
@@ -135,6 +145,7 @@ func TestDeprecateReleases(t *testing.T) {
 				Name:    "my-test1",
 				Version: "1.2.3",
 			},
+			Level:       v1alpha1.SemVerLevelRelease,
 			ReleaseTime: released,
 		},
 		{
@@ -142,6 +153,7 @@ func TestDeprecateReleases(t *testing.T) {
 				Name:    "my-test1",
 				Version: "1.2.4",
 			},
+			Level:       v1alpha1.SemVerLevelRelease,
 			ReleaseTime: released,
 		},
 	}
@@ -157,6 +169,7 @@ func TestDeprecateReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.2",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 				{
@@ -164,6 +177,7 @@ func TestDeprecateReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.3",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 				{
@@ -171,6 +185,7 @@ func TestDeprecateReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
+					Level:       v1alpha1.SemVerLevelRelease,
 					ReleaseTime: released,
 				},
 			},
