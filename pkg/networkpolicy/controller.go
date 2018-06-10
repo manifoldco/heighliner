@@ -124,6 +124,14 @@ func (c *Controller) syncNetworking(obj interface{}) error {
 		return nil
 	}
 
+	// XXX: kubekit needs these fields set, but they aren't there when coming
+	// through the watcher. Can we fix the watcher, or teach kubekit to
+	// introspect them?
+	np.TypeMeta = metav1.TypeMeta{
+		Kind:       "NetworkPolicy",
+		APIVersion: "hlnr.io/v1alpha1",
+	}
+
 	np.Status.Domains = newDomains
 	if _, err := c.patcher.Apply(np); err != nil {
 		log.Printf("Error syncing NetworkStatus %s: %s", np.Name, err)
