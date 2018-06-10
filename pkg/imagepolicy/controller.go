@@ -242,9 +242,9 @@ func filterImages(image string, repo *v1alpha1.GitHubRepository, registry regist
 				Name:    release.Name,
 				Version: release.Tag,
 			},
-			Released: release.ReleasedAt,
-			Image:    image + ":" + release.Tag,
-			Source:   source,
+			ReleaseTime: release.ReleaseTime,
+			Image:       image + ":" + release.Tag,
+			Source:      source,
 		}
 
 		releases = append(releases, confirmedRelease)
