@@ -410,11 +410,7 @@ func (c *Controller) syncDeployment(obj interface{}, deleted bool) {
 		return
 	}
 
-	domains := np.Status.Domains
-	if deleted {
-		domains = nil
-	}
-	changed, newReleases := reconcileDeployments(domains, ghr.Status.Releases)
+	changed, newReleases := reconcileDeployments(np.Status.Domains, deleted, ghr.Status.Releases)
 	if len(changed) == 0 {
 		return
 	}
@@ -512,42 +508,41 @@ func createGitHubDeployment(ctx context.Context, cl deploymentClient, repo *v1al
 	return id, err
 }
 
-func reconcileDeployments(domains []v1alpha1.Domain, releases []v1alpha1.GitHubRelease) ([]int, []v1alpha1.GitHubRelease) {
+// reconcileDeployments reconciles the list of provided domains and their
+// deleted state with the releases. It ignores releases the domains to not
+// reference.
+//
+// XXX because this only looks at a single networkpolicy's domains, if we delete
+// a networkpolicy, and error while reconciling, we'll miss the deletion until
+// we add a fill reconciliation on the github repository itself.
+func reconcileDeployments(domains []v1alpha1.Domain, deleted bool, releases []v1alpha1.GitHubRelease) ([]int, []v1alpha1.GitHubRelease) {
 	changed := make([]int, 0, len(releases))
 	newReleases := make([]v1alpha1.GitHubRelease, 0, len(releases))
 
 	for i, r := range releases {
-		found := false
 		for _, d := range domains {
 			if d.SemVer.Name != r.Name || d.SemVer.Version != r.Tag {
 				continue
 			}
-			found = true
 
-			if r.Deployment == nil {
+			if r.Deployment == nil && !deleted {
 				changed = append(changed, i)
 				r.Deployment = &v1alpha1.Deployment{
 					State: "success",
 					URL:   &d.URL,
 				}
 			}
-			newReleases = append(newReleases, r)
-			break
-		}
 
-		if !found {
-			// There never was a domain for this release, or the domain was deleted.
-			// XXX: this code misses when we created a deploy in github but
-			// never saved it to the api server. a full reconcile will have to catch that.
-
-			if r.Deployment != nil {
+			if r.Deployment != nil && deleted && r.Deployment.State != "inactive" {
 				r.Deployment.URL = nil
 				r.Deployment.State = "inactive"
 				changed = append(changed, i)
 			}
 
-			newReleases = append(newReleases, r)
+			break
 		}
+
+		newReleases = append(newReleases, r)
 	}
 
 	return changed, newReleases

@@ -162,16 +162,18 @@ func TestReconcileDeployments(t *testing.T) {
 	tcs := []struct {
 		name     string
 		domains  []v1alpha1.Domain
+		deleted  bool
 		releases []v1alpha1.GitHubRelease
 		out      []v1alpha1.GitHubRelease
 		changed  []int
 	}{
-		{"No releases", []v1alpha1.Domain{{}}, nil, []v1alpha1.GitHubRelease{}, []int{}},
-		{"No domains", nil, []v1alpha1.GitHubRelease{{}}, []v1alpha1.GitHubRelease{{}}, []int{}},
+		{"No releases", []v1alpha1.Domain{{}}, false, nil, []v1alpha1.GitHubRelease{}, []int{}},
+		{"No domains", nil, false, []v1alpha1.GitHubRelease{{}}, []v1alpha1.GitHubRelease{{}}, []int{}},
 
 		{
 			"New domain",
 			[]v1alpha1.Domain{{URL: fakeURL, SemVer: &v1alpha1.SemVerRelease{Name: "foo", Version: "1"}}},
+			false,
 			[]v1alpha1.GitHubRelease{{Name: "foo", Tag: "1"}},
 			[]v1alpha1.GitHubRelease{{Name: "foo", Tag: "1", Deployment: &v1alpha1.Deployment{State: "success", URL: &fakeURL}}},
 			[]int{0},
@@ -180,6 +182,7 @@ func TestReconcileDeployments(t *testing.T) {
 		{
 			"Existing deploy",
 			[]v1alpha1.Domain{{URL: fakeURL, SemVer: &v1alpha1.SemVerRelease{Name: "foo", Version: "1"}}},
+			false,
 			[]v1alpha1.GitHubRelease{{Name: "foo", Tag: "1", Deployment: &v1alpha1.Deployment{State: "success", URL: &fakeURL}}},
 			[]v1alpha1.GitHubRelease{{Name: "foo", Tag: "1", Deployment: &v1alpha1.Deployment{State: "success", URL: &fakeURL}}},
 			[]int{},
@@ -187,16 +190,26 @@ func TestReconcileDeployments(t *testing.T) {
 
 		{
 			"Removed domain",
-			nil,
+			[]v1alpha1.Domain{{URL: fakeURL, SemVer: &v1alpha1.SemVerRelease{Name: "foo", Version: "1"}}},
+			true,
 			[]v1alpha1.GitHubRelease{{Name: "foo", Tag: "1", Deployment: &v1alpha1.Deployment{State: "success", URL: &fakeURL}}},
 			[]v1alpha1.GitHubRelease{{Name: "foo", Tag: "1", Deployment: &v1alpha1.Deployment{State: "inactive"}}},
 			[]int{0},
+		},
+
+		{
+			"Unknown releases are kept the same",
+			[]v1alpha1.Domain{{URL: fakeURL, SemVer: &v1alpha1.SemVerRelease{Name: "bar", Version: "1"}}},
+			true,
+			[]v1alpha1.GitHubRelease{{Name: "foo", Tag: "1", Deployment: &v1alpha1.Deployment{State: "success", URL: &fakeURL}}},
+			[]v1alpha1.GitHubRelease{{Name: "foo", Tag: "1", Deployment: &v1alpha1.Deployment{State: "success", URL: &fakeURL}}},
+			[]int{},
 		},
 	}
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			changed, newReleases := reconcileDeployments(tc.domains, tc.releases)
+			changed, newReleases := reconcileDeployments(tc.domains, tc.deleted, tc.releases)
 
 			if !reflect.DeepEqual(changed, tc.changed) {
 				t.Error("bad result for changed. got:", changed, "wanted:", tc.changed)
