@@ -1061,15 +1061,6 @@ func (in *Release) DeepCopyInto(out *Release) {
 			**out = **in
 		}
 	}
-	if in.Source != nil {
-		in, out := &in.Source, &out.Source
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(meta_v1.OwnerReference)
-			(*in).DeepCopyInto(*out)
-		}
-	}
 	return
 }
 

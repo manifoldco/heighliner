@@ -6,12 +6,7 @@ import (
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// registry mock
-// githubrespository mock
-// see if i can create a status that is populated with these things as I expect it
 
 func TestFilterImages(t *testing.T) {
 
@@ -78,8 +73,7 @@ func TestFilterImages(t *testing.T) {
 						Version: tc.tag,
 					},
 
-					Image:  "manifoldco/heighliner:" + tc.tag,
-					Source: &metav1.OwnerReference{},
+					Image: "manifoldco/heighliner:" + tc.tag,
 				},
 			}
 
