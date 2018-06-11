@@ -108,7 +108,7 @@ func getIngressRules(ms *v1alpha1.Microservice, release *v1alpha1.Release, recor
 						{
 							Path: "/",
 							Backend: v1beta1.IngressBackend{
-								ServiceName: ms.Name,
+								ServiceName: release.StreamName(ms.Name),
 								ServicePort: intstr.FromString(servicePort),
 							},
 						},
