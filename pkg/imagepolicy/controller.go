@@ -205,7 +205,12 @@ func getVersioningPolicy(cl patchClient, ip *v1alpha1.ImagePolicy) (*v1alpha1.Ve
 	}
 
 	policyName := ip.Spec.VersioningPolicy.Name
-	if err := cl.Get(vp, ip.Namespace, policyName); err != nil {
+	policyNamespace := ip.Spec.VersioningPolicy.Namespace
+	if policyNamespace == "" {
+		policyNamespace = ip.Namespace
+	}
+
+	if err := cl.Get(vp, policyNamespace, policyName); err != nil {
 		return nil, err
 	}
 
