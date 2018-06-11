@@ -20,8 +20,8 @@ type Release struct {
 	// image.
 	Image string `json:"image"`
 
-	// Released represents when this version became available to be deployed.
-	Released metav1.Time `json:"released"`
+	// ReleaseTime represents when this version became available to be deployed.
+	ReleaseTime metav1.Time `json:"releaseTime"`
 
 	// SemVer is the SemVer release object linked to this Release if the
 	// VersioningPolicy associated with it is SemVer.
@@ -33,7 +33,7 @@ type Release struct {
 
 // String concatenates the Release values into a single unique string.
 func (r Release) String() string {
-	return fmt.Sprintf("%s-%s", r.SemVer.String(), r.Released)
+	return fmt.Sprintf("%s-%s", r.SemVer.String(), r.ReleaseTime)
 }
 
 // FullName creates the full name for a release. It takes the name of a
@@ -107,7 +107,7 @@ func (r *SemVerRelease) fullName() string {
 var ReleaseValidationSchema = v1beta1.JSONSchemaProps{
 	Properties: map[string]v1beta1.JSONSchemaProps{
 		"releases": {
-			Required: []string{"semVer", "image", "released"},
+			Required: []string{"semVer", "image", "releaseTime"},
 			Properties: map[string]v1beta1.JSONSchemaProps{
 				"semVer": semVerReleaseValidation,
 			},

@@ -101,7 +101,7 @@ func (c *Controller) hashConfigValues(obj interface{}) error {
 	// some values of our config have changed, update the CRD status so
 	// depending resources get notified.
 	if hashedString != cp.Status.Hashed {
-		cp.Status.LastUpdated = metav1.Now()
+		cp.Status.LastUpdatedTime = metav1.Now()
 		cp.Status.Hashed = hashedString
 
 		cp.TypeMeta = metav1.TypeMeta{

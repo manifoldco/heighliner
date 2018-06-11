@@ -229,10 +229,10 @@ func getPullRequestRelease(payload []byte) (*v1alpha1.GitHubRelease, bool, error
 	}
 
 	return &v1alpha1.GitHubRelease{
-		Name:       *pre.PullRequest.Head.Ref,
-		Tag:        *pre.PullRequest.Head.SHA,
-		Level:      v1alpha1.SemVerLevelPreview,
-		ReleasedAt: releasedAtFromGitHubTimestamp(pre.PullRequest.Head.Repo.UpdatedAt),
+		Name:        *pre.PullRequest.Head.Ref,
+		Tag:         *pre.PullRequest.Head.SHA,
+		Level:       v1alpha1.SemVerLevelPreview,
+		ReleaseTime: releaseTimeFromGitHubTimestamp(pre.PullRequest.Head.Repo.UpdatedAt),
 	}, *pre.PullRequest.State != "closed", nil
 }
 
@@ -257,13 +257,13 @@ func getOfficialRelease(payload []byte) (*v1alpha1.GitHubRelease, bool, error) {
 	}
 
 	return &v1alpha1.GitHubRelease{
-		Name:       name,
-		Tag:        *re.Release.TagName,
-		Level:      lvl,
-		ReleasedAt: releasedAtFromGitHubTimestamp(re.Release.PublishedAt),
+		Name:        name,
+		Tag:         *re.Release.TagName,
+		Level:       lvl,
+		ReleaseTime: releaseTimeFromGitHubTimestamp(re.Release.PublishedAt),
 	}, true, nil // There's no webhook for release deletion
 }
 
-func releasedAtFromGitHubTimestamp(ts *github.Timestamp) metav1.Time {
+func releaseTimeFromGitHubTimestamp(ts *github.Timestamp) metav1.Time {
 	return metav1.NewTime(ts.Time)
 }

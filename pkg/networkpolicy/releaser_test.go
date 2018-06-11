@@ -11,16 +11,16 @@ import (
 func TestLatestReleaser(t *testing.T) {
 	releases := []v1alpha1.Release{
 		{
-			Image:    "1",
-			Released: metav1.Date(2018, time.April, 28, 13, 42, 01, 0, time.UTC),
+			Image:       "1",
+			ReleaseTime: metav1.Date(2018, time.April, 28, 13, 42, 01, 0, time.UTC),
 		},
 		{
-			Image:    "2",
-			Released: metav1.Date(2018, time.April, 29, 13, 52, 01, 0, time.UTC),
+			Image:       "2",
+			ReleaseTime: metav1.Date(2018, time.April, 29, 13, 52, 01, 0, time.UTC),
 		},
 		{
-			Image:    "3",
-			Released: metav1.Date(2018, time.April, 27, 13, 32, 01, 0, time.UTC),
+			Image:       "3",
+			ReleaseTime: metav1.Date(2018, time.April, 27, 13, 32, 01, 0, time.UTC),
 		},
 	}
 

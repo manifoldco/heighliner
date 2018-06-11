@@ -73,11 +73,11 @@ type GitHubHook struct {
 
 // GitHubRelease represents a release made in GitHub
 type GitHubRelease struct {
-	Name       string      `json:"name"`
-	Tag        string      `json:"tag"`
-	Level      SemVerLevel `json:"level"`
-	ReleasedAt metav1.Time `json:"releasedAt"`
-	Deployment *Deployment `json:"deployment,omitempty"`
+	Name        string      `json:"name"`
+	Tag         string      `json:"tag"`
+	Level       SemVerLevel `json:"level"`
+	ReleaseTime metav1.Time `json:"releaseTime"`
+	Deployment  *Deployment `json:"deployment,omitempty"`
 }
 
 // Deployment represents a linking between a GitHub deployment and a network

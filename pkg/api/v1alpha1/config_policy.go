@@ -34,8 +34,8 @@ type ConfigPolicySpec struct {
 
 // ConfigPolicyStatus represents the current status of a ConfigPolicy.
 type ConfigPolicyStatus struct {
-	LastUpdated metav1.Time `json:"lastUpdated"`
-	Hashed      string      `json:"hashed"`
+	LastUpdatedTime metav1.Time `json:"lastUpdatedTime"`
+	Hashed          string      `json:"hashed"`
 }
 
 // ConfigPolicyValidationSchema represents the OpenAPIV3Schema validation for
@@ -44,7 +44,7 @@ var ConfigPolicyValidationSchema = &v1beta1.CustomResourceValidation{
 	OpenAPIV3Schema: &v1beta1.JSONSchemaProps{
 		Properties: map[string]v1beta1.JSONSchemaProps{
 			"status": {
-				Required: []string{"lastUpdated", "hashed"},
+				Required: []string{"lastUpdatedTime", "hashed"},
 			},
 		},
 	},

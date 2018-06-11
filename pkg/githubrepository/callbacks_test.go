@@ -120,8 +120,8 @@ func TestGetPullRequestRelease(t *testing.T) {
 
 	//2015-05-05T23:40:27Z
 	prDate := metav1.NewTime(time.Date(2015, 05, 05, 23, 40, 12, 0, time.UTC))
-	if !release.ReleasedAt.Equal(&prDate) {
-		t.Errorf("Expected date (%s) doesn't equal actual date (%s)", prDate, release.ReleasedAt)
+	if !release.ReleaseTime.Equal(&prDate) {
+		t.Errorf("Expected date (%s) doesn't equal actual date (%s)", prDate, release.ReleaseTime)
 	}
 }
 
@@ -148,8 +148,8 @@ func TestGetOfficialRelease(t *testing.T) {
 	}
 
 	releaseDate := metav1.NewTime(time.Date(2015, 05, 05, 23, 40, 38, 0, time.UTC))
-	if !release.ReleasedAt.Equal(&releaseDate) {
-		t.Errorf("Expected date (%s) doesn't equal actual date (%s)", releaseDate, release.ReleasedAt)
+	if !release.ReleaseTime.Equal(&releaseDate) {
+		t.Errorf("Expected date (%s) doesn't equal actual date (%s)", releaseDate, release.ReleaseTime)
 	}
 }
 

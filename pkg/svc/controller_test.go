@@ -18,14 +18,14 @@ func TestDeprecatedReleases(t *testing.T) {
 					Name:    "my-test1",
 					Version: "1.2.3",
 				},
-				Released: released,
+				ReleaseTime: released,
 			},
 			{
 				SemVer: &v1alpha1.SemVerRelease{
 					Name:    "my-test1",
 					Version: "1.2.4",
 				},
-				Released: released,
+				ReleaseTime: released,
 			},
 		}
 
@@ -42,14 +42,14 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.3",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 				{
 					SemVer: &v1alpha1.SemVerRelease{
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 			}
 
@@ -59,21 +59,21 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.2",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 				{
 					SemVer: &v1alpha1.SemVerRelease{
 						Name:    "my-test1",
 						Version: "1.2.3",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 				{
 					SemVer: &v1alpha1.SemVerRelease{
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 			}
 
@@ -89,14 +89,14 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.3",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 				{
 					SemVer: &v1alpha1.SemVerRelease{
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 			}
 
@@ -106,7 +106,7 @@ func TestDeprecatedReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 			}
 
@@ -135,14 +135,14 @@ func TestDeprecateReleases(t *testing.T) {
 				Name:    "my-test1",
 				Version: "1.2.3",
 			},
-			Released: released,
+			ReleaseTime: released,
 		},
 		{
 			SemVer: &v1alpha1.SemVerRelease{
 				Name:    "my-test1",
 				Version: "1.2.4",
 			},
-			Released: released,
+			ReleaseTime: released,
 		},
 	}
 
@@ -157,21 +157,21 @@ func TestDeprecateReleases(t *testing.T) {
 						Name:    "my-test1",
 						Version: "1.2.2",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 				{
 					SemVer: &v1alpha1.SemVerRelease{
 						Name:    "my-test1",
 						Version: "1.2.3",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 				{
 					SemVer: &v1alpha1.SemVerRelease{
 						Name:    "my-test1",
 						Version: "1.2.4",
 					},
-					Released: released,
+					ReleaseTime: released,
 				},
 			},
 		},
