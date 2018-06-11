@@ -214,13 +214,6 @@ func getVersioningPolicy(cl patchClient, ip *v1alpha1.ImagePolicy) (*v1alpha1.Ve
 
 // filter images available on the image policy status by release level and image registry tags
 func filterImages(image string, repo *v1alpha1.GitHubRepository, registry registry.Registry, vp *v1alpha1.VersioningPolicy) ([]v1alpha1.Release, error) {
-
-	// define the source as an OwnerReference
-	source := metav1.NewControllerRef(
-		repo,
-		v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(repo)),
-	)
-
 	releases := []v1alpha1.Release{}
 	for _, release := range repo.Status.Releases {
 
@@ -244,7 +237,6 @@ func filterImages(image string, repo *v1alpha1.GitHubRepository, registry regist
 			},
 			ReleaseTime: release.ReleaseTime,
 			Image:       image + ":" + release.Tag,
-			Source:      source,
 		}
 
 		releases = append(releases, confirmedRelease)
