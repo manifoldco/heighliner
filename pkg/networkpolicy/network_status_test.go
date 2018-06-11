@@ -12,6 +12,7 @@ func TestNetworkStatus(t *testing.T) {
 		SemVer: &v1alpha1.SemVerRelease{
 			Name: "hello-world",
 		},
+		Level: v1alpha1.SemVerLevelRelease,
 	}
 
 	ms := &v1alpha1.Microservice{}

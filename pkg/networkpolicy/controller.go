@@ -173,7 +173,7 @@ func syncSelectedRelease(cs kubernetes.Interface, cl patchClient, ms *v1alpha1.M
 		return nil, err
 	}
 
-	srv, err := createOrReplaceService(cs, cl, ms, np, externalRelease, ms.Name)
+	srv, err := createOrReplaceService(cs, cl, ms, np, externalRelease, externalRelease.StreamName(ms.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func groupReleases(name string, releases []v1alpha1.Release) map[string][]v1alph
 	grouped := map[string][]v1alpha1.Release{}
 
 	for _, release := range releases {
-		key := release.FullName(name)
+		key := release.StreamName(name)
 		if _, ok := grouped[key]; !ok {
 			grouped[key] = []v1alpha1.Release{}
 		}

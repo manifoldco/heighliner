@@ -19,6 +19,7 @@ func TestBuildIngressForRelease(t *testing.T) {
 		SemVer: &v1alpha1.SemVerRelease{
 			Name: "hello-world",
 		},
+		Level: v1alpha1.SemVerLevelRelease,
 	}
 
 	np := &v1alpha1.NetworkPolicy{}
@@ -75,8 +76,10 @@ func TestBuildIngressForRelease(t *testing.T) {
 func TestTemplatedDomain(t *testing.T) {
 	release := &v1alpha1.Release{
 		SemVer: &v1alpha1.SemVerRelease{
-			Name: "hello-world",
+			Name:    "hello-world",
+			Version: "0.0.1",
 		},
+		Level: v1alpha1.SemVerLevelPreview,
 	}
 
 	ms := &v1alpha1.Microservice{
@@ -90,8 +93,9 @@ func TestTemplatedDomain(t *testing.T) {
 		expected string
 		err      error
 	}{
-		{"{{.FullName}}.pr.arigato.tools", "hello-world-c92fbe4899.pr.arigato.tools", nil},
-		{"{{.Name}}.pr.arigato.tools", "hello-world.pr.arigato.tools", nil},
+		{"{{.FullName}}.arigato.tools", "hello-world-pr-cmqolv9f-svek39uq.arigato.tools", nil},
+		{"{{.Name}}.arigato.tools", "hello-world.arigato.tools", nil},
+		{"{{.StreamName}}.arigato.tools", "hello-world-pr-cmqolv9f.arigato.tools", nil},
 	}
 
 	for _, item := range testData {

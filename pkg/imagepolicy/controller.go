@@ -240,6 +240,7 @@ func filterImages(image string, repo *v1alpha1.GitHubRepository, registry regist
 				Name:    release.Name,
 				Version: release.Tag,
 			},
+			Level:       release.Level,
 			ReleaseTime: release.ReleaseTime,
 			Image:       image + ":" + release.Tag,
 		}

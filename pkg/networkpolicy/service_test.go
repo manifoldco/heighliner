@@ -13,8 +13,8 @@ func TestBuildServiceForRelease(t *testing.T) {
 		SemVer: &v1alpha1.SemVerRelease{
 			Name:    "test-application",
 			Version: "1.2.3",
-			Build:   "201804121722",
 		},
+		Level: v1alpha1.SemVerLevelRelease,
 	}
 
 	ms := &v1alpha1.Microservice{

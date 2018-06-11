@@ -67,7 +67,7 @@ func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolic
 			APIVersion: "extensions/v1beta1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        release.FullName(ms.Name),
+			Name:        release.StreamName(ms.Name),
 			Namespace:   ms.Namespace,
 			Labels:      labels,
 			Annotations: annotations,
@@ -155,12 +155,14 @@ func templatedDomain(ms *v1alpha1.Microservice, release *v1alpha1.Release, domai
 	}
 
 	data := struct {
-		FullName string
-		Name     string
+		FullName   string
+		StreamName string
+		Name       string
 	}{
 
-		FullName: release.FullName(ms.Name),
-		Name:     release.Name(),
+		FullName:   release.FullName(ms.Name),
+		StreamName: release.StreamName(ms.Name),
+		Name:       release.Name(),
 	}
 
 	buf := bytes.NewBufferString("")
