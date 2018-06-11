@@ -14,21 +14,24 @@ func TestGroupReleases(t *testing.T) {
 				{
 					Image: "hlnr.io/test:1.2.3-pr.456-pr+201804281301",
 					SemVer: &v1alpha1.SemVerRelease{
-						Name: "456-pr",
+						Name:    "456-pr",
+						Version: "0.1.0",
 					},
 					Level: v1alpha1.SemVerLevelPreview,
 				},
 				{
 					Image: "hlnr.io/test:1.2.3-pr.456-pr+201804281308",
 					SemVer: &v1alpha1.SemVerRelease{
-						Name: "456-pr",
+						Name:    "456-pr",
+						Version: "0.1.1",
 					},
 					Level: v1alpha1.SemVerLevelPreview,
 				},
 				{
 					Image: "hlnr.io/test:1.2.3-pr.457-pr+201804281307",
 					SemVer: &v1alpha1.SemVerRelease{
-						Name: "457-pr",
+						Name:    "457-pr",
+						Version: "0.1.0",
 					},
 					Level: v1alpha1.SemVerLevelPreview,
 				},
