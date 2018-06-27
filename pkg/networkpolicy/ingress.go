@@ -8,7 +8,7 @@ import (
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
-	"github.com/manifoldco/heighliner/pkg/k8sutils"
+	"github.com/manifoldco/heighliner/pkg/meta"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -34,13 +34,9 @@ func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolic
 		}
 	}
 
-	labels := k8sutils.Labels(np.Labels, np.ObjectMeta)
-	labels["hlnr.io/microservice.full_name"] = release.FullName(ms.Name)
-	labels["hlnr.io/microservice.name"] = ms.Name
-	labels["hlnr.io/microservice.release"] = release.Name()
-	labels["hlnr.io/microservice.version"] = release.Version()
+	labels := meta.MicroserviceLabels(ms, release, np)
 
-	annotations := k8sutils.Annotations(np.Annotations, v1alpha1.Version, np)
+	annotations := meta.Annotations(np.Annotations, v1alpha1.Version, np)
 	annotations["kubernetes.io/ingress.class"] = ingressClass
 	annotations["external-dns.alpha.kubernetes.io/hostname"] = strings.Join(domains, ",")
 	// TODO (jelmer): different TTLs should mean different Ingresses

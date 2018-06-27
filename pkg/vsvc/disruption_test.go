@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
-	"github.com/manifoldco/heighliner/pkg/k8sutils"
+	"github.com/manifoldco/heighliner/pkg/meta"
 
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/policy/v1beta1"
@@ -18,7 +18,7 @@ func TestGetPodDisruptionBudget(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, min, pdb.Spec.MinAvailable)
 		assert.Equal(t, max, pdb.Spec.MaxUnavailable)
-		assert.Equal(t, crd.Name, pdb.Spec.Selector.MatchLabels[k8sutils.LabelServiceKey])
+		assert.Equal(t, crd.Name, pdb.Spec.Selector.MatchLabels[meta.LabelServiceKey])
 	}
 
 	t.Run("without config", func(t *testing.T) {

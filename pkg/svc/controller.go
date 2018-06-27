@@ -9,6 +9,7 @@ import (
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
+	"github.com/manifoldco/heighliner/pkg/meta"
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
@@ -190,11 +191,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, ip *v1
 	delete(annotations, "kubectl.kubernetes.io/last-applied-configuration")
 
 	name := release.FullName(crd.Name)
-	labels := k8sutils.Labels(crd.Labels, crd.ObjectMeta)
-	labels["hlnr.io/microservice.full_name"] = name
-	labels["hlnr.io/microservice.name"] = crd.Name
-	labels["hlnr.io/microservice.release"] = release.Name()
-	labels["hlnr.io/microservice.version"] = release.Version()
+	labels := meta.MicroserviceLabels(crd, release, crd)
 
 	// TODO(jelmer): currently we need to specify the TypeMeta here. We need to
 	// investigate a way to automate this depending on the passed in Object. The

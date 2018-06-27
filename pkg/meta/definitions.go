@@ -1,4 +1,4 @@
-package k8sutils
+package meta
 
 const (
 	// LabelServiceKey is used to annotate the application with a specific
