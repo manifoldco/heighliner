@@ -33,3 +33,73 @@ func TestMicroserviceLabels(t *testing.T) {
 		t.Error("labels did not match. got:", l, "wanted:", expected)
 	}
 }
+
+func TestTrim(t *testing.T) {
+	tcs := []struct {
+		name string
+		in   string
+		l    int
+		out  string
+	}{
+		{"empty", "", 2, ""},
+		{"short", "abc", 4, "abc"},
+		{"long", "abcdef", 4, "abcd"},
+		{"unicode", "😍cool stuff", 4, "😍coo"},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			if trim(tc.in, tc.l) != tc.out {
+				t.Error("trim did not match. got:", trim(tc.in, tc.l), "wanted:", tc.out)
+			}
+		})
+	}
+}
+
+func TestElide(t *testing.T) {
+	tcs := []struct {
+		name string
+		in   string
+		l    int
+		out  string
+	}{
+		{"empty", "", 4, ""},
+		{"skip elide", "abc", 2, "ab"},
+		{"short", "abc", 4, "abc"},
+		{"long", "abcdef", 5, "a...0"},
+		{"unicode", "😍cool stuff", 7, "😍co...0"},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			if elide(tc.in, tc.l) != tc.out {
+				t.Error("elide did not match. got:", elide(tc.in, tc.l), "wanted:", tc.out)
+			}
+		})
+	}
+}
+
+func TestLabelize(t *testing.T) {
+	tcs := []struct {
+		name string
+		in   string
+		out  string
+	}{
+		{"empty", "", ""},
+		{"same", "ab0-c", "ab0-c"},
+		{"pad with 0s", ".abc.", "0.abc.0"},
+		{"replace chars", "replace space? great", "replace_space__great"},
+		{"replace unicode", "😍cool stuff", "0_cool_stuff"},
+		{"elided",
+			"The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog",
+			"The_quick_brown_fox_jumps_over_the_lazy_dog._The_quick_brow...0"},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			if labelize(tc.in) != tc.out {
+				t.Error("labelize did not match. got:", labelize(tc.in), "wanted:", tc.out)
+			}
+		})
+	}
+}
