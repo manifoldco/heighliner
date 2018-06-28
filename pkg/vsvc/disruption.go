@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
-	"github.com/manifoldco/heighliner/pkg/k8sutils"
+	"github.com/manifoldco/heighliner/pkg/meta"
 
 	"github.com/jelmersnoeck/kubekit"
 	"k8s.io/api/policy/v1beta1"
@@ -22,8 +22,8 @@ var (
 func getPodDisruptionBudget(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) {
 	budget := defaultDisruptionBudget.DeepCopy()
 
-	labels := k8sutils.Labels(crd.Labels, crd.ObjectMeta)
-	annotations := k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd)
+	labels := meta.Labels(crd.Labels, crd)
+	annotations := meta.Annotations(crd.Annotations, v1alpha1.Version, crd)
 
 	budget.ObjectMeta = metav1.ObjectMeta{
 		Name:        crd.Name,
@@ -37,7 +37,7 @@ func getPodDisruptionBudget(crd *v1alpha1.VersionedMicroservice) (runtime.Object
 			),
 		},
 	}
-	budget.Spec.Selector.MatchLabels[k8sutils.LabelServiceKey] = crd.Name
+	budget.Spec.Selector.MatchLabels[meta.LabelServiceKey] = crd.Name
 	if crd.Spec.Availability != nil {
 		av := crd.Spec.Availability
 

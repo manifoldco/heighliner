@@ -3,6 +3,7 @@ package vsvc
 import (
 	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	"github.com/manifoldco/heighliner/pkg/k8sutils"
+	"github.com/manifoldco/heighliner/pkg/meta"
 
 	"github.com/jelmersnoeck/kubekit"
 	corev1 "k8s.io/api/core/v1"
@@ -18,8 +19,8 @@ func getDeployment(crd *v1alpha1.VersionedMicroservice) (runtime.Object, error) 
 		availability = &v1alpha1.DefaultAvailabilityPolicySpec
 	}
 
-	labels := k8sutils.Labels(crd.Labels, crd.ObjectMeta)
-	annotations := k8sutils.Annotations(crd.Annotations, v1alpha1.Version, crd)
+	labels := meta.Labels(crd.Labels, crd)
+	annotations := meta.Annotations(crd.Annotations, v1alpha1.Version, crd)
 
 	affinity := availability.Affinity
 	if affinity == nil {
