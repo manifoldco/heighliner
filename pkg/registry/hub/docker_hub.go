@@ -42,21 +42,6 @@ func (c *Client) GetManifest(repo string, tag string) (bool, error) {
 	return true, nil
 }
 
-// Ping validates if the given credentials are valid for the given registry.
-func (c *Client) Ping() error {
-	rsp, err := c.Client.Get(expandURL(c.Config.URL, "/v2/"))
-	if err != nil {
-		return err
-	}
-	defer rsp.Body.Close()
-
-	if rsp.StatusCode != http.StatusOK {
-		return errors.New(rsp.Status)
-	}
-
-	return nil
-}
-
 type (
 	tokenTransport struct {
 		URL       string
