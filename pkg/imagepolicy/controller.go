@@ -188,7 +188,7 @@ func getRegistry(cl patchClient, ip *v1alpha1.ImagePolicy) (registry.Registry, e
 		return nil, err
 	}
 
-	registryClient, err := hub.New(secret, ip.Spec.Image) // TODO: make this generic to multiple container registries
+	registryClient, err := hub.New(secret) // TODO: make this generic to multiple container registries
 	if err != nil {
 		return nil, err
 	}
