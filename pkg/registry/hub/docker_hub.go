@@ -3,94 +3,48 @@ package hub
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
-	"strings"
 
+	"github.com/heroku/docker-registry-client/registry"
 	"k8s.io/api/core/v1"
 )
 
-const (
-	// DockerHubRegistryURL refers to the registry that will be used to access image on DockerHub
-	DockerHubRegistryURL string = "https://registry-1.docker.io"
+const dockerHubRegistryURL string = "https://registry-1.docker.io"
 
-	// DockerHubManifestAcceptString refers to the application type to request for the image manifests
-	DockerHubManifestAcceptString string = "application/vnd.docker.distribution.manifest.v2+json"
-
-	// DockerHubRepoAuthString is the URL that must be authed to in order to get a repository access token
-	DockerHubRepoAuthString string = "https://auth.docker.io/token?scope=repository:%s:pull&service=registry.docker.io"
-)
-
-// GetManifest returns a bool indicated weather or not the tag for that image is available
-func (c *Client) GetManifest(repo string, tag string) (bool, error) {
-	url := expandURL(c.Config.URL, fmt.Sprintf("/v2/%s/manifests/%s", repo, tag))
-
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Accept", DockerHubManifestAcceptString)
-	rsp, err := c.Client.Do(req)
-
-	if err != nil {
-		return false, err
-	}
-	defer rsp.Body.Close()
-
-	if rsp.StatusCode != http.StatusOK {
-		return false, nil
-	}
-
-	return true, nil
+// Client is a docker registry client
+type Client struct {
+	c *registry.Registry
 }
 
-type (
-	tokenTransport struct {
-		URL       string
-		Username  string
-		Password  string
-		ImageRepo string
-		Next      http.RoundTripper
-	}
-
-	authToken struct {
-		Token string `json:"token"`
-	}
-
-	// Config represents the options to create a new registry client.
-	Config struct {
-		URL       string
-		Username  string
-		Password  string
-		ImageRepo string
-	}
-
-	// Client interacts with the Docker Hub API.
-	Client struct {
-		Config
-		Client *http.Client
-	}
-)
-
 // New creates a new registry client for Docker Hub.
-func New(secret *v1.Secret, imageRepo string) (*Client, error) {
+func New(secret *v1.Secret) (*Client, error) {
 	// TODO(jelmer): we need to abstract this out. Docker Hub - hosted - has a
 	// different interface than a local registry. We can do this detection based
 	// on the hostname.
 	// For now, we'll focus on docker hub.
 
 	// get cfg from k8s secret
-	cfg := configFromSecret(secret)
-	cfg.ImageRepo = imageRepo
+	u, p, err := configFromSecret(secret)
+	if err != nil {
+		return nil, err
+	}
 
-	return &Client{
-		Config: cfg,
-		Client: newHTTPClient(cfg),
-	}, nil
+	c, err := registry.New(dockerHubRegistryURL, u, p)
+	if err != nil {
+		return nil, err
+	}
+
+	c.Logf = registry.Quiet
+
+	return &Client{c: c}, nil
 }
 
-func configFromSecret(secret *v1.Secret) Config {
+func configFromSecret(secret *v1.Secret) (string, string, error) {
 	var creds = map[string]map[string]string{}
 	credsJSON := secret.Data[".dockercfg"]
-	json.Unmarshal(credsJSON, &creds)
+	if err := json.Unmarshal(credsJSON, &creds); err != nil {
+		return "", "", err
+	}
 
 	// .dockercfg has one key which is the url of the docker registry
 	var url string
@@ -98,68 +52,22 @@ func configFromSecret(secret *v1.Secret) Config {
 		url = key
 	}
 
-	cfg := Config{
-		URL:      DockerHubRegistryURL,
-		Username: creds[url]["username"],
-		Password: creds[url]["password"],
-	}
-
-	return cfg
+	return creds[url]["username"], creds[url]["password"], nil
 }
 
-func newHTTPClient(cfg Config) *http.Client {
-	transport := http.DefaultTransport
-	transport = &tokenTransport{
-		URL:       cfg.URL,
-		Username:  cfg.Username,
-		Password:  cfg.Password,
-		ImageRepo: cfg.ImageRepo,
-		Next:      transport,
+// GetManifest returns a bool indicated weather or not the tag for that image is available
+func (c *Client) GetManifest(repo string, tag string) (bool, error) {
+	_, err := c.c.ManifestDigest(repo, tag)
+	switch t := err.(type) {
+	case nil:
+		return true, nil
+	case *registry.HttpStatusError:
+		if t.Response.StatusCode == http.StatusNotFound {
+			return false, nil
+		}
+
+		return false, err
+	default:
+		return false, err
 	}
-
-	return &http.Client{
-		Transport: transport,
-	}
-}
-
-func (t *tokenTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	token, err := t.newToken()
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	return t.Next.RoundTrip(req)
-}
-
-func (t *tokenTransport) newToken() (string, error) {
-
-	authURL := fmt.Sprintf(DockerHubRepoAuthString, t.ImageRepo)
-	req, err := http.NewRequest("GET", authURL, nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.SetBasicAuth(t.Username, t.Password)
-	rsp, err := t.Next.RoundTrip(req)
-	if err != nil {
-		return "", err
-	}
-	defer rsp.Body.Close()
-
-	if rsp.StatusCode >= 400 {
-		return "", errors.New(rsp.Status)
-	}
-
-	tokenData := &authToken{}
-	decoder := json.NewDecoder(rsp.Body)
-	if err := decoder.Decode(tokenData); err != nil {
-		return "", err
-	}
-
-	return tokenData.Token, nil
-}
-
-func expandURL(url, path string) string {
-	return fmt.Sprintf("%s%s", strings.TrimSuffix(url, "/"), path)
 }
