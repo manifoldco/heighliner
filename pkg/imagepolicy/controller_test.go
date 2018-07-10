@@ -91,10 +91,6 @@ func TestFilterImages(t *testing.T) {
 
 type mockRegistryClient struct{}
 
-func (c *mockRegistryClient) Ping() error {
-	return nil
-}
-
 func (c *mockRegistryClient) GetManifest(image string, tag string) (bool, error) {
 	return true, nil
 }
