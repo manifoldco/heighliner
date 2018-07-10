@@ -218,7 +218,7 @@ func getVersioningPolicy(cl patchClient, ip *v1alpha1.ImagePolicy) (*v1alpha1.Ve
 }
 
 // filter images available on the image policy status by release level and image registry tags
-func filterImages(image string, repo *v1alpha1.GitHubRepository, registry registry.Registry, vp *v1alpha1.VersioningPolicy) ([]v1alpha1.Release, error) {
+func filterImages(image string, repo *v1alpha1.GitHubRepository, reg registry.Registry, vp *v1alpha1.VersioningPolicy) ([]v1alpha1.Release, error) {
 	releases := []v1alpha1.Release{}
 	for _, release := range repo.Status.Releases {
 
@@ -226,13 +226,14 @@ func filterImages(image string, repo *v1alpha1.GitHubRepository, registry regist
 			continue
 		}
 
-		releaseStatus, err := registry.GetManifest(image, release.Tag)
+		tag, err := reg.TagFor(image, release.Tag)
+		if registry.IsTagNotFoundError(err) {
+			log.Printf("Release %s for tag %s is not available in the registry", release.Name, release.Tag)
+			continue
+		}
+
 		if err != nil {
 			return nil, err
-		}
-		if !releaseStatus {
-			log.Printf("Release %s with tag %s is not available in the registry", release.Name, release.Tag)
-			continue
 		}
 
 		confirmedRelease := v1alpha1.Release{
@@ -242,7 +243,7 @@ func filterImages(image string, repo *v1alpha1.GitHubRepository, registry regist
 			},
 			Level:       release.Level,
 			ReleaseTime: release.ReleaseTime,
-			Image:       image + ":" + release.Tag,
+			Image:       image + ":" + tag,
 		}
 
 		releases = append(releases, confirmedRelease)

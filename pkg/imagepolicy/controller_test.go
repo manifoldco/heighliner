@@ -91,6 +91,4 @@ func TestFilterImages(t *testing.T) {
 
 type mockRegistryClient struct{}
 
-func (c *mockRegistryClient) GetManifest(image string, tag string) (bool, error) {
-	return true, nil
-}
+func (c *mockRegistryClient) TagFor(image string, tag string) (string, error) { return tag, nil }

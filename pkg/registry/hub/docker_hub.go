@@ -7,6 +7,8 @@ import (
 
 	"github.com/heroku/docker-registry-client/registry"
 	"k8s.io/api/core/v1"
+
+	reg "github.com/manifoldco/heighliner/pkg/registry"
 )
 
 const dockerHubRegistryURL string = "https://registry-1.docker.io"
@@ -55,19 +57,20 @@ func configFromSecret(secret *v1.Secret) (string, string, error) {
 	return creds[url]["username"], creds[url]["password"], nil
 }
 
-// GetManifest returns a bool indicated weather or not the tag for that image is available
-func (c *Client) GetManifest(repo string, tag string) (bool, error) {
-	_, err := c.c.ManifestDigest(repo, tag)
+// TagFor returns the tag name that matches the provided repo and release.
+// It returns a registry.TagNotFound error if no matching tag is found.
+func (c *Client) TagFor(repo string, release string) (string, error) {
+	_, err := c.c.ManifestDigest(repo, release)
 	switch t := err.(type) {
 	case nil:
-		return true, nil
+		return release, nil
 	case *registry.HttpStatusError:
 		if t.Response.StatusCode == http.StatusNotFound {
-			return false, nil
+			return "", reg.NewTagNotFoundError(repo, release)
 		}
 
-		return false, err
+		return "", err
 	default:
-		return false, err
+		return "", err
 	}
 }
