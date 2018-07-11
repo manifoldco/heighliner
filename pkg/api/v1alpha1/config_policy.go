@@ -26,6 +26,8 @@ type ConfigPolicyList struct {
 
 // ConfigPolicySpec describes the specification for Config.
 type ConfigPolicySpec struct {
+	Args         []string               `json:"args,omitempty"`
+	Command      []string               `json:"command,omitempty"`
 	Env          []corev1.EnvVar        `json:"env,omitempty"`
 	EnvFrom      []corev1.EnvFromSource `json:"envFrom,omitempty"`
 	VolumeMounts []corev1.VolumeMount   `json:"volumeMounts,omitempty"`

@@ -90,6 +90,8 @@ func populateContainers(crd *v1alpha1.VersionedMicroservice) {
 		container.VolumeMounts = crd.Spec.Config.VolumeMounts
 		container.EnvFrom = crd.Spec.Config.EnvFrom
 		container.Env = crd.Spec.Config.Env
+		container.Args = crd.Spec.Config.Args
+		container.Command = crd.Spec.Config.Command
 
 		// reassign the container in the CRD
 		crd.Spec.Containers[i] = container
