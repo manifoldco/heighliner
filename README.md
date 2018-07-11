@@ -16,7 +16,7 @@ software, keeping the state of your deployments always as they should be.
 **Connected.** The cluster is aware of container registry and source code
 repository state. It reacts to them (creating new deploys), and reflects into
 them (updating GitHub PR deployment status). Preview deploys are automatically
-created and destoryed. Deploys can auto-update based on Semantic Versioning
+created and destroyed. Deploys can auto-update based on Semantic Versioning
 policies, or be manually controlled.
 
 **Complete.** A Heighliner Microservice comes with DNS and TLS out of the box.
@@ -26,7 +26,7 @@ running without much effort, but can be overridded for customization.
 
 ## Installation
 
-Heighliner exists out of multiple components, we've explained these in detail
+Heighliner consists out of multiple components, we've explained these in detail
 in the [design docs](docs/design/README.md).
 
 For a full installation process, have a look at the [installation docs](docs/installation.md).
@@ -35,7 +35,10 @@ For a full installation process, have a look at the [installation docs](docs/ins
 
 ### Configure a GitHub Repository
 
-The github repository resource is used to syncronize releases and pull requests
+Ensure that you have an API token installed in your cluster. Follow our [how to](docs/design/github-connector.md#APIToken)
+for further instructions.
+
+The GitHub repository resource is used to syncronize releases and pull requests
 with cluster state, and update pull requests with deployment status.
 
 ```yaml
@@ -69,7 +72,7 @@ spec:
 ### Configure an Image Policy
 
 The image policy resource syncronizes Docker container images with cluster
-state. It cross references with github releases, filtering out images that do
+state. It cross references with GitHub releases, filtering out images that do
 not match the versioning policy.
 
 ```yaml
