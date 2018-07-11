@@ -1,7 +1,12 @@
 # Heighliner
 
+[![Build Status](https://travis-ci.com/manifoldco/heighliner.svg?token=SbTMbCYMT5HWVmmTnBoj&branch=master)](https://travis-ci.com/manifoldco/heighliner)
+[![GoDoc](https://godoc.org/github.com/manifoldco/heighliner?status.svg)](https://godoc.org/github.com/manifoldco/heighliner)
+
 > A Heighliner is truly big. Its hold will tuck all of our frigates and transports
 > into a little corner-we'll be just one small part of the ship's manifest.
+
+Heighliner aims to make your workflow with GitHub and Kubernetes easy.
 
 ## Goals
 
