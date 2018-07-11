@@ -95,6 +95,26 @@ status:
 
 ---
 
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: github-callback-tls
+  namespace: hlnr-system
+spec:
+  secretName: github-callback-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: '{{.GitHubCallbackURL}}'
+  acme:
+    config:
+    - dns01:
+        provider: {{.DNSProvider}}
+      domains:
+      - '{{.GitHubCallbackURL}}'
+
+---
+
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -105,6 +125,10 @@ metadata:
     external-dns.alpha.kubernetes.io/hostname: {{.GitHubCallbackURL}}.
     external-dns.alpha.kubernetes.io/ttl: "300"
 spec:
+  tls:
+  - hosts:
+    - {{.GitHubCallbackURL}}
+    secretName: github-callback-tls
   rules:
   - host: {{.GitHubCallbackURL}}
     http:
