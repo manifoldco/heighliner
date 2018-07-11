@@ -1,9 +1,0 @@
-apiVersion: hlnr.io/v1alpha1
-kind: VersionedMicroservice
-metadata:
-  name: hello-world-minimum
-spec:
-  containers:
-  - name: hello-world
-    image: hlnr/hello-world:latest
-    imagePullPolicy: IfNotPresent

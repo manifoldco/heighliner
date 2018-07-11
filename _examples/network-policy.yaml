@@ -1,0 +1,43 @@
+# This NetworkPolicy will allow Heighliner to create Services and Ingresses for
+# the references Microservice. It will create a Service and Ingress per release
+# that has been deployed.
+apiVersion: hlnr.io/v1alpha1
+kind: NetworkPolicy
+metadata:
+  name: manifold-www
+  namespace: previews
+spec:
+  microservice:
+    name: demo-application
+  ports:
+  - name: headless
+    port: 80
+    targetPort: 3000
+  externalDNS:
+  - domain: "{{.StreamName}}.previews.heighliner.com"
+    port: headless
+    tlsGroup: previews-tls
+  updateStrategy:
+    latest: {}
+
+---
+
+# This will install a CertManager certificate into the cluster that allows us to
+# use a wildcard certificate. See https://github.com/jetstack/cert-manager for
+# more information.
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: previews-tls
+spec:
+  secretName: previews-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: '*.previews.heighliner.com'
+  acme:
+    config:
+    - dns01:
+        provider: route53-dns
+      domains:
+      - '*.previews.heighliner.com'

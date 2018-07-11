@@ -1,0 +1,45 @@
+# This is a secret which holds information about a private Docker Registry. This
+# allows us to use images that are privately hosted.
+# See https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+# for more information.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: docker-registry
+type: kubernetes.io/dockercfg
+data:
+  .dockercfg: # base64 encoded registry information
+
+---
+
+# This Versioning Policy defines that we only want to pull in information
+# related to previews. In our case, this means PullRequests.
+apiVersion: hlnr.io/v1alpha1
+kind: VersioningPolicy
+metadata:
+  name: previews
+spec:
+  semVer:
+    version: major
+    level: preview
+
+---
+
+# This ImagePolicy uses the given GitHub filter to get a list of available
+# releases. It will then match these with what's available on docker hub for the
+# given image and for the given VersioningPolicy.
+# We've set up an ImagePullSecret here to illustrate that we can also pull in
+# private images.
+apiVersion: hlnr.io/v1alpha1
+kind: ImagePolicy
+metadata:
+  name: demo-application
+spec:
+  image: arigato/manifold-www
+  imagePullSecrets:
+  - name: docker-registry
+  versioningPolicy:
+    name: previews
+  filter:
+    github:
+      name: demo-application

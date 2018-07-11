@@ -1,0 +1,24 @@
+# This custom ConfigPolicy sets up some Environment Variables and Command
+# Arguments for the container. It's also possible to set up Volumes and Volume
+# Mounts through the ConfigPolicy.
+#
+# The ConfigPolicy will be monitored for changes, once changes are detected in
+# the configuration or the values of the confniguration (envs), a new deployment
+# for the Microservices which reference this ConfigPolicy will be created.
+apiVersion: hlnr.io/v1alpha1
+kind: ConfigPolicy
+metadata:
+  name: demo-application
+spec:
+  command:
+  - demo-application
+  args:
+  - --log-level=4
+  env:
+  - name: PORT
+    value: "3000"
+  - name: API_TOKEN
+    valueFrom:
+      secretKeyRef:
+        name: demo-application-secrets
+        key: API_TOKEN
