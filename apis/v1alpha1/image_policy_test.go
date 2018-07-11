@@ -43,6 +43,110 @@ func TestImagePolicyMatchMapName(t *testing.T) {
 	}
 }
 
+func TestImagePolicyMatchMatches(t *testing.T) {
+	tcs := []struct {
+		name string
+
+		in       string
+		tag      string
+		labels   map[string]string
+		expected bool
+		noErr    bool
+
+		match *ImagePolicyMatch
+	}{
+		{"nil match is default", "tag", "tag", nil, true, true, nil},
+		{"zero value is default", "tag", "tag", nil, true, true, &ImagePolicyMatch{}},
+
+		{"default no match", "tag", "not tag", nil, false, true, nil},
+
+		{"err is propagated in name", "tag", "tag", nil, false, false, &ImagePolicyMatch{
+			Name: &ImagePolicyMatchMapping{
+				From: "{{",
+			},
+		}},
+
+		{"match on labels", "tag", "not tag",
+			map[string]string{
+				"org.fake.label": "vtag",
+			},
+			true, true,
+			&ImagePolicyMatch{
+				Labels: map[string]ImagePolicyMatchMapping{
+					"org.fake.label": {To: "v{{.Tag}}"},
+				},
+			},
+		},
+
+		{"exclude on labels", "tag", "not tag",
+			map[string]string{
+				"org.fake.label": "not tag",
+			},
+			false, true,
+			&ImagePolicyMatch{
+				Labels: map[string]ImagePolicyMatchMapping{
+					"org.fake.label": {},
+				},
+			},
+		},
+
+		{"err is propagated in labels", "tag", "not tag",
+			map[string]string{
+				"org.fake.label": "tag",
+			},
+			false, false,
+			&ImagePolicyMatch{
+				Labels: map[string]ImagePolicyMatchMapping{
+					"org.fake.label": {From: "{{."},
+				},
+			},
+		},
+
+		{"exclude on missing label", "tag", "tag",
+			map[string]string{},
+			false, true,
+			&ImagePolicyMatch{
+				Name: &ImagePolicyMatchMapping{},
+				Labels: map[string]ImagePolicyMatchMapping{
+					"org.fake.label": {},
+				},
+			},
+		},
+
+		{"match on all values", "tag", "tag",
+			map[string]string{
+				"org.fake.label":       "tag",
+				"org.fake.other.label": "tasty",
+			},
+			true, true,
+			&ImagePolicyMatch{
+				Name: &ImagePolicyMatchMapping{},
+				Labels: map[string]ImagePolicyMatchMapping{
+					"org.fake.label":       {},
+					"org.fake.other.label": {From: "{{.Tag}}g", To: "{{.Tag}}sty"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := tc.match.Matches(tc.in, tc.tag, tc.labels)
+			if tc.noErr && err != nil {
+				t.Fatal("expected no err but got one:", err)
+			}
+
+			if !tc.noErr && err == nil {
+				t.Fatal("expected err but got none.")
+			}
+
+			if out != tc.expected {
+				t.Error("wrong result. expected:", tc.expected, "got:", out)
+			}
+		})
+	}
+}
+
 func TestImagePolicyMatchMapping(t *testing.T) {
 	tcs := []struct {
 		name  string
