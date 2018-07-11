@@ -8,6 +8,7 @@ import (
 	"github.com/heroku/docker-registry-client/registry"
 	"k8s.io/api/core/v1"
 
+	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
 	reg "github.com/manifoldco/heighliner/pkg/registry"
 )
 
@@ -59,11 +60,21 @@ func configFromSecret(secret *v1.Secret) (string, string, error) {
 
 // TagFor returns the tag name that matches the provided repo and release.
 // It returns a registry.TagNotFound error if no matching tag is found.
-func (c *Client) TagFor(repo string, release string) (string, error) {
-	_, err := c.c.ManifestDigest(repo, release)
+func (c *Client) TagFor(repo string, release string, matcher *v1alpha1.ImagePolicyMatch) (string, error) {
+	mapped := release
+	if matcher != nil && matcher.Name != nil {
+		var err error
+		mapped, err = matcher.Name.Map(release)
+
+		if err != nil {
+			return "", err
+		}
+	}
+
+	_, err := c.c.ManifestDigest(repo, mapped)
 	switch t := err.(type) {
 	case nil:
-		return release, nil
+		return mapped, nil
 	case *registry.HttpStatusError:
 		if t.Response.StatusCode == http.StatusNotFound {
 			return "", reg.NewTagNotFoundError(repo, release)

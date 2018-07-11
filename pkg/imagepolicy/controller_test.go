@@ -77,7 +77,7 @@ func TestFilterImages(t *testing.T) {
 				},
 			}
 
-			actualReleases, err := filterImages(ip.Spec.Image, repo, registry, vp)
+			actualReleases, err := filterImages(ip.Spec.Image, ip.Spec.Match, repo, registry, vp)
 			if err != nil {
 				t.Errorf("Error filtering images for %s", ip.Name)
 			}
@@ -91,4 +91,6 @@ func TestFilterImages(t *testing.T) {
 
 type mockRegistryClient struct{}
 
-func (c *mockRegistryClient) TagFor(image string, tag string) (string, error) { return tag, nil }
+func (c *mockRegistryClient) TagFor(image string, tag string, matcher *v1alpha1.ImagePolicyMatch) (string, error) {
+	return tag, nil
+}
