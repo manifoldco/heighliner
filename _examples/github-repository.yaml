@@ -1,0 +1,26 @@
+# This secret should be set up manually. It's required to connect to your GH
+# repository.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gh-token-demo-application
+type: Opaque
+data:
+  # Base64 encoded GH API token
+  GITHUB_AUTH_TOKEN: YmFzZTY0IGVuY29kZWQgR0ggQVBJIHRva2Vu
+
+---
+
+# By installing this CRD, we will set up a connection with the
+# github.com/my-github-team/demo-application repository. This means that for
+# every new release and PR we'll get notified.
+apiVersion: hlnr.io/v1alpha1
+kind: GitHubRepository
+metadata:
+  name: demo-application
+spec:
+  maxAvailable: 1
+  repo: demo-application
+  owner: my-github-team
+  configSecret:
+    name: gh-token-demo-application

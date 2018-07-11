@@ -1,0 +1,13 @@
+apiVersion: hlnr.io/v1alpha1
+kind: Microservice
+metadata:
+  name: manifold-www
+spec:
+  imagePolicy:
+    name: demo-application
+  configPolicy:
+    name: demo-application
+  availabilityPolicy:
+    name: high-availability
+  healthPolicy:
+    name: node-apps

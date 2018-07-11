@@ -1,0 +1,17 @@
+# This is a custom availability policy. Heighliner will install a default
+# AvailabilityPolicy which is set up to be highly available with 2 replicas and
+# ensures that pods run on different hosts and in different zones.
+# It will also set up a PodDisruptionBudget which ensures that there is always
+# at minimum 1 pod available before rescheduling.
+apiVersion: hlnr.io/v1alpha1
+kind: AvailabilityPolicy
+metadata:
+  name: high-availability
+spec:
+  replicas: 4
+  minAvailable: 1
+  restartPolicy: Always
+  deploymentStrategy:
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 25%

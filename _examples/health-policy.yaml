@@ -1,0 +1,20 @@
+# This is a custom HealthPolicy which allows you to set up health checks for
+# your application. This can be generalized and reused across multiple
+# Microservices.
+apiVersion: hlnr.io/v1alpha1
+kind: HealthPolicy
+metadata:
+  name: node-apps
+spec:
+  readinessProbe:
+    httpGet:
+      path: /_healthz
+      port: 3000
+    initialDelaySeconds: 3
+    periodSeconds: 3
+  livenessProbe:
+    httpGet:
+      path: /_healthz
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 3
