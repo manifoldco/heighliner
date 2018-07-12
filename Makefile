@@ -9,7 +9,8 @@ ci: lint cover release
 #################################################
 BOOTSTRAP=\
 	github.com/golang/dep/cmd/dep \
-	github.com/alecthomas/gometalinter
+	github.com/alecthomas/gometalinter \
+	github.com/jteeuwen/go-bindata
 
 $(BOOTSTRAP):
 	go get -u $@
@@ -66,7 +67,10 @@ api-versions:
 $(GENERATED_FILES):
 	deepcopy-gen -v=5 -h boilerplate.go.txt -i $(PKG)/$(patsubst %/zz_generated.go,%,$@) -O zz_generated
 
-generated: $(GENERATED_FILES)
+bindata:
+	go-bindata -o cmd/heighliner/zz_generated_data.go docs/kube/
+
+generated: $(GENERATED_FILES) bindata
 
 .PHONY: $(GENERATED_FILES)
 
