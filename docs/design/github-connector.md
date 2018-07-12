@@ -26,7 +26,31 @@ below.
 ### API Token
 
 First, an API token will be needed if a CRD is set up. This [GitHub API Token](https://github.com/settings/tokens)
-should have the `admin:repo_hook` and `repo` permissions. Once you have a token you can manually add it to your secrets in development in the namespace that your app expects. The expected token key is `GITHUB_AUTH_TOKEN`
+should have the `admin:repo_hook` and `repo` permissions. Once you have a token
+you can manually add it to your secrets in development in the namespace that
+your app expects. The expected token key is `GITHUB_AUTH_TOKEN`.
+
+This Token is only needed when installing a new GitHubRepository as it is
+repository bound.
+
+To install a token, go to the [GitHub Personal Access Tokens](https://github.com/settings/tokens) page.
+
+![GitHub API Tokens](github-tokens.png)
+
+On the next page, you'll see the API token, this will be in the format of
+`888fe32217e96eaaa0709c37a488fd4a457015eb`.
+
+With this token, you can now generate a new Kubernetes Secret:
+
+```
+$ kubectl create secret generic github-auth-token --from-literal=GITHUB_AUTH_TOKEN=888fe32217e96eaaa0709c37a488fd4a457015eb
+```
+
+This will put the secret in your cluster in a format Heighliner understands. You
+can now use `github-auth-token` as a reference to the secret.
+
+*Note*: this needs to be installed in the namespace where you install the
+GitHubRepository.
 
 ### Domain
 
