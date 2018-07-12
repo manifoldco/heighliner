@@ -1,10 +1,13 @@
 package registry
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/manifoldco/heighliner/pkg/api/v1alpha1"
+)
 
 // Registry represents the interface any registry needs to provide to query it.
 type Registry interface {
-	TagFor(string, string) (string, error)
+	TagFor(string, string, *v1alpha1.ImagePolicyMatch) (string, error)
 }
 
 type tagNotFoundError string

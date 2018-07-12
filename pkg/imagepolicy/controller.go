@@ -128,7 +128,7 @@ func (c *Controller) syncPolicy(obj interface{}) error {
 		return nil
 	}
 
-	ip.Status.Releases, err = filterImages(ip.Spec.Image, repo, registry, vp)
+	ip.Status.Releases, err = filterImages(ip.Spec.Image, ip.Spec.Match, repo, registry, vp)
 	if err != nil {
 		log.Printf("Could not filter images for %s: %s", ip.Name, err)
 		return nil
@@ -218,7 +218,7 @@ func getVersioningPolicy(cl patchClient, ip *v1alpha1.ImagePolicy) (*v1alpha1.Ve
 }
 
 // filter images available on the image policy status by release level and image registry tags
-func filterImages(image string, repo *v1alpha1.GitHubRepository, reg registry.Registry, vp *v1alpha1.VersioningPolicy) ([]v1alpha1.Release, error) {
+func filterImages(image string, matcher *v1alpha1.ImagePolicyMatch, repo *v1alpha1.GitHubRepository, reg registry.Registry, vp *v1alpha1.VersioningPolicy) ([]v1alpha1.Release, error) {
 	releases := []v1alpha1.Release{}
 	for _, release := range repo.Status.Releases {
 
@@ -226,7 +226,7 @@ func filterImages(image string, repo *v1alpha1.GitHubRepository, reg registry.Re
 			continue
 		}
 
-		tag, err := reg.TagFor(image, release.Tag)
+		tag, err := reg.TagFor(image, release.Tag, matcher)
 		if registry.IsTagNotFoundError(err) {
 			log.Printf("Release %s for tag %s is not available in the registry", release.Name, release.Tag)
 			continue
