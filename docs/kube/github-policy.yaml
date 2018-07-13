@@ -67,7 +67,7 @@ spec:
           - github-repository-controller
           env:
             - name: DOMAIN
-              value: {{.GitHubCallbackURL}}
+              value: {{.GitHubCallbackDomain}}
           resources:
             requests:
               cpu: 100m
@@ -105,13 +105,13 @@ spec:
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
-  commonName: '{{.GitHubCallbackURL}}'
+  commonName: '{{.GitHubCallbackDomain}}'
   acme:
     config:
     - dns01:
         provider: {{.DNSProvider}}
       domains:
-      - '{{.GitHubCallbackURL}}'
+      - '{{.GitHubCallbackDomain}}'
 
 ---
 
@@ -122,15 +122,15 @@ metadata:
   namespace: hlnr-system
   annotations:
     kubernetes.io/ingress.class: "nginx"
-    external-dns.alpha.kubernetes.io/hostname: {{.GitHubCallbackURL}}.
+    external-dns.alpha.kubernetes.io/hostname: {{.GitHubCallbackDomain}}.
     external-dns.alpha.kubernetes.io/ttl: "300"
 spec:
   tls:
   - hosts:
-    - {{.GitHubCallbackURL}}
+    - {{.GitHubCallbackDomain}}
     secretName: github-callback-tls
   rules:
-  - host: {{.GitHubCallbackURL}}
+  - host: {{.GitHubCallbackDomain}}
     http:
       paths:
       - path: /
