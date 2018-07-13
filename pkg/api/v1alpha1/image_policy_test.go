@@ -2,6 +2,47 @@ package v1alpha1
 
 import "testing"
 
+func TestImagePolicyMatchMapName(t *testing.T) {
+	tcs := []struct {
+		name string
+
+		in    string
+		out   string
+		noErr bool
+
+		match *ImagePolicyMatch
+	}{
+		{"nil match is default", "tag", "tag", true, nil},
+		{"zero value is default", "tag", "tag", true, &ImagePolicyMatch{}},
+
+		{"err is propagated", "tag", "", false, &ImagePolicyMatch{
+			Name: &ImagePolicyMatchMapping{From: "{{"},
+		}},
+
+		{"name is mapped", "tag", "vtag", true, &ImagePolicyMatch{
+			Name: &ImagePolicyMatchMapping{To: "v{{.Tag}}"},
+		}},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := tc.match.MapName(tc.in)
+
+			if tc.noErr && err != nil {
+				t.Fatal("expected no err but got one:", err)
+			}
+
+			if !tc.noErr && err == nil {
+				t.Fatal("expected err but got none.")
+			}
+
+			if out != tc.out {
+				t.Error("wrong mapping. expected:", tc.out, "got:", out)
+			}
+		})
+	}
+}
+
 func TestImagePolicyMatchMapping(t *testing.T) {
 	tcs := []struct {
 		name  string

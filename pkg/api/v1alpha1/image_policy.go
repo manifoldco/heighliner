@@ -13,6 +13,10 @@ import (
 
 const defaultMatch = "{{.Tag}}"
 
+var defaultImagePolicyMatch = &ImagePolicyMatch{
+	Name: &ImagePolicyMatchMapping{},
+}
+
 var (
 	errTagNotFound = errors.New("no Tag template value found")
 	errTooManyTags = errors.New("only one Tag template must be provided")
@@ -59,6 +63,17 @@ type ImagePolicyStatus struct {
 type ImagePolicyMatch struct {
 	// Name defines a match on the image tag name.
 	Name *ImagePolicyMatchMapping `json:"name,omitempty"`
+}
+
+// MapName returns the Name mapping for the provided release value.
+// It returns an error if the name mapping errors.
+func (m *ImagePolicyMatch) MapName(release string) (string, error) {
+	if m == nil || m.Name == nil {
+		m = defaultImagePolicyMatch
+	}
+
+	mapped, err := m.Name.Map(release)
+	return mapped, err
 }
 
 // ImagePolicyMatchMapping defines how a release is transformed to match an
