@@ -1,6 +1,8 @@
 # Heighliner
 
 [![Build Status](https://travis-ci.com/manifoldco/heighliner.svg?token=SbTMbCYMT5HWVmmTnBoj&branch=master)](https://travis-ci.com/manifoldco/heighliner)
+[![codecov](https://codecov.io/gh/manifoldco/heighliner/branch/master/graph/badge.svg)](https://codecov.io/gh/manifoldco/heighliner)
+[![Go Report Card](https://goreportcard.com/badge/github.com/manifoldco/heighliner)](https://goreportcard.com/report/github.com/manifoldco/heighliner)
 [![GoDoc](https://godoc.org/github.com/manifoldco/heighliner?status.svg)](https://godoc.org/github.com/manifoldco/heighliner)
 
 > A Heighliner is truly big. Its hold will tuck all of our frigates and transports
