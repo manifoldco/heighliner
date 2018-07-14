@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/manifoldco/heighliner/pkg/svc"
+	"github.com/manifoldco/heighliner/internal/svc"
 
 	"github.com/jelmersnoeck/kubekit"
 	flags "github.com/jessevdk/go-flags"
