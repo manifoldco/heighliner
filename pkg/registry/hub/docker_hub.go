@@ -61,17 +61,12 @@ func configFromSecret(secret *v1.Secret) (string, string, error) {
 // TagFor returns the tag name that matches the provided repo and release.
 // It returns a registry.TagNotFound error if no matching tag is found.
 func (c *Client) TagFor(repo string, release string, matcher *v1alpha1.ImagePolicyMatch) (string, error) {
-	mapped := release
-	if matcher != nil && matcher.Name != nil {
-		var err error
-		mapped, err = matcher.Name.Map(release)
-
-		if err != nil {
-			return "", err
-		}
+	mapped, err := matcher.MapName(release)
+	if err != nil {
+		return "", err
 	}
 
-	_, err := c.c.ManifestDigest(repo, mapped)
+	_, err = c.c.ManifestDigest(repo, mapped)
 	switch t := err.(type) {
 	case nil:
 		return mapped, nil
