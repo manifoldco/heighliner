@@ -1,6 +1,7 @@
 package svc
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/jelmersnoeck/kubekit/patcher"
@@ -197,8 +198,53 @@ func TestDeprecateReleases(t *testing.T) {
 	}
 }
 
+func TestController_PatchMicroservice(t *testing.T) {
+	cl := new(kubekitClient)
+	ctrl := &Controller{patcher: cl}
+	deploy := &v1alpha1.Microservice{}
+
+	t.Run("without releases", func(t *testing.T) {
+		cl.getFunc = func(obj interface{}, namespace, name string) error {
+			if obj, ok := obj.(*v1alpha1.ImagePolicy); ok {
+				obj.Status = v1alpha1.ImagePolicyStatus{
+					Releases: []v1alpha1.Release{},
+				}
+
+				return nil
+			}
+
+			return errors.New("Object not supported")
+		}
+
+		cl.applyFunc = func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
+			msvc := obj.(*v1alpha1.Microservice)
+			if len(msvc.Status.Releases) > 0 {
+				t.Errorf("Expected no releases to be set up")
+			}
+
+			return nil, nil
+		}
+
+		err := ctrl.patchMicroservice(deploy)
+		if err != nil {
+			t.Errorf("Expected no error, got %s", err)
+		}
+	})
+
+}
+
 type kubekitClient struct {
+	applyFunc  func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error)
+	getFunc    func(obj interface{}, namespace, name string) error
 	deleteFunc func(runtime.Object, ...patcher.OptionFunc) error
+}
+
+func (c *kubekitClient) Apply(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
+	return c.applyFunc(obj, opts...)
+}
+
+func (c *kubekitClient) Get(obj interface{}, namespace, name string) error {
+	return c.getFunc(obj, namespace, name)
 }
 
 func (c *kubekitClient) Delete(obj runtime.Object, ops ...patcher.OptionFunc) error {
