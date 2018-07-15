@@ -4,8 +4,10 @@ package hub
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/opencontainers/go-digest"
 	"k8s.io/api/core/v1"
@@ -20,7 +22,9 @@ var errNoUsername = errors.New("username missing from configuration")
 var errNoPassword = errors.New("password missing from configuration")
 
 type regClient interface {
-	ManifestDigest(string, string) (digest.Digest, error)
+	Tags(string) ([]string, error)
+	ManifestV2(string, string) (*schema2.DeserializedManifest, error)
+	DownloadLayer(string, digest.Digest) (io.ReadCloser, error)
 }
 
 // Client is a docker registry client
@@ -81,25 +85,77 @@ func configFromSecret(secret *v1.Secret) (string, string, error) {
 	return stanza.Username, stanza.Password, nil
 }
 
+type containerConfig struct {
+	Labels map[string]string
+}
+
+type config struct {
+	ContainerConfig containerConfig `json:"container_config"`
+}
+
 // TagFor returns the tag name that matches the provided repo and release.
 // It returns a registry.TagNotFound error if no matching tag is found.
 func (c *Client) TagFor(repo string, release string, matcher *v1alpha1.ImagePolicyMatch) (string, error) {
-	mapped, err := matcher.MapName(release)
-	if err != nil {
-		return "", err
+
+	hasName, hasLabels := matcher.Config()
+
+	ts := []string{release}
+
+	if hasName {
+		n, err := matcher.MapName(release)
+		if err != nil {
+			return "", err
+		}
+		ts = append(ts, n)
+	} else {
+		var err error
+		ts, err = c.c.Tags(repo)
+		if err != nil {
+			return "", normalizeErr(repo, release, err)
+		}
 	}
 
-	_, err = c.c.ManifestDigest(repo, mapped)
-	switch t := err.(type) {
-	case nil:
-		return mapped, nil
-	case *registry.HttpStatusError:
-		if t.Response.StatusCode == http.StatusNotFound {
-			return "", reg.NewTagNotFoundError(repo, release)
+	for _, t := range ts {
+		m, err := c.c.ManifestV2(repo, t)
+		if err != nil {
+			return "", normalizeErr(repo, release, err)
 		}
 
-		return "", err
-	default:
-		return "", err
+		var labels map[string]string
+		if hasLabels {
+			l, err := c.c.DownloadLayer(repo, m.Config.Digest)
+			if err != nil {
+				return "", normalizeErr(repo, release, err)
+			}
+
+			var c config
+			d := json.NewDecoder(l)
+			if err := d.Decode(&c); err != nil {
+				return "", err
+			}
+
+			labels = c.ContainerConfig.Labels
+		}
+
+		matches, err := matcher.Matches(release, t, labels)
+		if err != nil {
+			return "", err
+		}
+
+		if matches {
+			return t, nil
+		}
 	}
+
+	return "", reg.NewTagNotFoundError(repo, release)
+}
+
+func normalizeErr(repo, release string, err error) error {
+	if t, ok := err.(*registry.HttpStatusError); ok {
+		if t.Response.StatusCode == http.StatusNotFound {
+			return reg.NewTagNotFoundError(repo, release)
+		}
+	}
+
+	return err
 }

@@ -68,6 +68,16 @@ type ImagePolicyMatch struct {
 	Labels map[string]ImagePolicyMatchMapping `json:"labels,omitempty"`
 }
 
+// Config returns two booleans indicating if there is name matching and label
+// matching in this match.
+func (m *ImagePolicyMatch) Config() (bool, bool) {
+	if m == nil || (m.Name == nil && len(m.Labels) == 0) {
+		m = defaultImagePolicyMatch
+	}
+
+	return m.Name != nil, len(m.Labels) > 0
+}
+
 // MapName returns the Name mapping for the provided release value.
 // It returns an error if the name mapping errors.
 func (m *ImagePolicyMatch) MapName(release string) (string, error) {

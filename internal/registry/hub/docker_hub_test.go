@@ -2,10 +2,15 @@ package hub
 
 import (
 	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/heroku/docker-registry-client/registry"
 	digest "github.com/opencontainers/go-digest"
 	"k8s.io/api/core/v1"
@@ -86,43 +91,142 @@ func TestClientTagFor(t *testing.T) {
 		out string
 		err error
 
-		resp    digest.Digest
-		errResp error
+		tags   []string
+		tagErr error
+
+		manifests   []*schema2.DeserializedManifest
+		manifestErr error
+
+		labels   []string
+		labelErr error
 
 		match *v1alpha1.ImagePolicyMatch
 	}{
-		{"ok", "v1.0.0", nil, digest.Digest("fake"), nil, nil},
-		{"can map", "1.0.0", nil, digest.Digest("fake"), nil, &v1alpha1.ImagePolicyMatch{
-			Name: &v1alpha1.ImagePolicyMatchMapping{From: "v{{.Tag}}"},
-		}},
+		{"ok", "v1.0.0", nil, nil, nil,
+			[]*schema2.DeserializedManifest{{}},
+			nil, nil, nil, nil},
+		{"can map and lookup on name", "1.0.0", nil, nil, nil,
+			[]*schema2.DeserializedManifest{{}}, nil, nil, nil,
+			&v1alpha1.ImagePolicyMatch{
+				Name: &v1alpha1.ImagePolicyMatchMapping{From: "v{{.Tag}}"},
+			},
+		},
 
 		{
-			"not found", "",
+			"manifest not found", "",
 			reg.NewTagNotFoundError("testrepo", "v1.0.0"),
-			digest.Digest(""),
+			nil, nil, nil,
 			&registry.HttpStatusError{Response: &http.Response{StatusCode: 404}},
-			nil,
+			nil, nil, nil,
 		},
 
 		{
-			"registry 500", "",
+			"registry 500 on manifest lookup", "",
 			&registry.HttpStatusError{Response: &http.Response{StatusCode: 500}},
-			digest.Digest(""),
+			nil, nil, nil,
 			&registry.HttpStatusError{Response: &http.Response{StatusCode: 500}},
-			nil,
+			nil, nil, nil,
 		},
+
 		{
-			"registry non-http error", "",
+			"registry non-http error on manifest lookup", "",
 			errors.New("bad"),
-			digest.Digest(""),
+			nil, nil, nil,
 			errors.New("bad"),
-			nil,
+			nil, nil, nil,
+		},
+
+		{
+			"can match by label", "v1.0.0", nil,
+			[]string{"v1.0.0"}, nil,
+			[]*schema2.DeserializedManifest{{}}, nil,
+			[]string{`{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`}, nil,
+			&v1alpha1.ImagePolicyMatch{
+				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
+					"org.fake.label": {},
+				},
+			},
+		},
+
+		{
+			"can exclude by label", "",
+			reg.NewTagNotFoundError("testrepo", "v1.0.0"),
+			[]string{"v1.0.0"}, nil,
+			[]*schema2.DeserializedManifest{{}}, nil,
+			[]string{`{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`}, nil,
+			&v1alpha1.ImagePolicyMatch{
+				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
+					"org.fake.other.label": {},
+				},
+			},
+		},
+
+		{
+			"can match by label from many", "v1.0.0", nil,
+			[]string{"v2.0.0", "v1.0.0", "v0.0.1"}, nil,
+			[]*schema2.DeserializedManifest{{}, {}, {}}, nil,
+			[]string{
+				`{ "container_config": { "Labels": { "org.fake.other.label": "v1.0.0" } } }`,
+				`{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`,
+				`{ "container_config": { "Labels": {} } }`,
+			}, nil,
+			&v1alpha1.ImagePolicyMatch{
+				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
+					"org.fake.label": {},
+				},
+			},
+		},
+
+		{
+			"propagates tag list error", "",
+			errors.New("bad"),
+			nil, errors.New("bad"),
+			nil, nil,
+			nil, nil,
+			&v1alpha1.ImagePolicyMatch{
+				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
+					"org.fake.label": {},
+				},
+			},
+		},
+
+		{
+			"propagates config download error", "",
+			errors.New("bad"),
+			[]string{"v1.0.0"}, nil,
+			[]*schema2.DeserializedManifest{{}}, nil,
+			[]string{``}, errors.New("bad"),
+			&v1alpha1.ImagePolicyMatch{
+				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
+					"org.fake.label": {},
+				},
+			},
 		},
 	}
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
-			c := &Client{c: testRegistry{tc.resp, tc.errResp}}
+
+			ms := make(map[string]*schema2.DeserializedManifest)
+			ls := make(map[string]string)
+
+			for i := range tc.tags {
+				ms[tc.tags[i]] = tc.manifests[i]
+				if tc.manifests[i] != nil {
+					dig := digest.Digest(fmt.Sprintf("%d", i))
+					tc.manifests[i].Config.Digest = dig
+					ls[string(dig)] = tc.labels[i]
+				}
+			}
+
+			c := &Client{c: testRegistry{
+				ts: tc.tags,
+				te: tc.tagErr,
+				m:  ms,
+				me: tc.manifestErr,
+				l:  ls,
+				le: tc.labelErr,
+			}}
 
 			out, err := c.TagFor("testrepo", "v1.0.0", tc.match)
 
@@ -137,10 +241,24 @@ func TestClientTagFor(t *testing.T) {
 }
 
 type testRegistry struct {
-	d digest.Digest
-	e error
+	ts []string
+	te error
+
+	m  map[string]*schema2.DeserializedManifest
+	me error
+
+	l  map[string]string
+	le error
 }
 
-func (t testRegistry) ManifestDigest(repository, image string) (digest.Digest, error) {
-	return t.d, t.e
+func (t testRegistry) Tags(repository string) ([]string, error) {
+	return t.ts, t.te
+}
+
+func (t testRegistry) ManifestV2(repository, image string) (*schema2.DeserializedManifest, error) {
+	return t.m[image], t.me
+}
+
+func (t testRegistry) DownloadLayer(repository string, dig digest.Digest) (io.ReadCloser, error) {
+	return ioutil.NopCloser(strings.NewReader(t.l[string(dig)])), t.le
 }

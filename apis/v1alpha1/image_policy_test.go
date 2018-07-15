@@ -2,6 +2,42 @@ package v1alpha1
 
 import "testing"
 
+func TestImagePolicyMatchConfig(t *testing.T) {
+	tcs := []struct {
+		name string
+
+		hasName   bool
+		hasLabels bool
+
+		match *ImagePolicyMatch
+	}{
+		{"nil", true, false, nil},
+		{"empty", true, false, &ImagePolicyMatch{}},
+
+		{"both", true, true, &ImagePolicyMatch{
+			Name: &ImagePolicyMatchMapping{},
+			Labels: map[string]ImagePolicyMatchMapping{
+				"org.fake.label": {},
+			},
+		}},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+
+			n, l := tc.match.Config()
+
+			if n != tc.hasName {
+				t.Error("wrong value for name. expected:", tc.hasName, "got:", n)
+			}
+
+			if l != tc.hasLabels {
+				t.Error("wrong value for labels. expected:", tc.hasLabels, "got:", l)
+			}
+		})
+	}
+}
+
 func TestImagePolicyMatchMapName(t *testing.T) {
 	tcs := []struct {
 		name string
