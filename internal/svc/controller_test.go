@@ -2,10 +2,12 @@ package svc
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/jelmersnoeck/kubekit/patcher"
 	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -201,9 +203,16 @@ func TestDeprecateReleases(t *testing.T) {
 func TestController_PatchMicroservice(t *testing.T) {
 	cl := new(kubekitClient)
 	ctrl := &Controller{patcher: cl}
-	deploy := &v1alpha1.Microservice{}
+	deploy := &v1alpha1.Microservice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-deploy",
+			Namespace: "testing",
+		},
+	}
 
 	t.Run("without releases", func(t *testing.T) {
+		defer cl.flush()
+
 		cl.getFunc = func(obj interface{}, namespace, name string) error {
 			if obj, ok := obj.(*v1alpha1.ImagePolicy); ok {
 				obj.Status = v1alpha1.ImagePolicyStatus{
@@ -231,12 +240,98 @@ func TestController_PatchMicroservice(t *testing.T) {
 		}
 	})
 
+	t.Run("with a release", func(t *testing.T) {
+		t.Run("without extra config", func(t *testing.T) {
+			defer cl.flush()
+
+			fullName := "test-deploy-pr-2l6fggiv-ribi3jce"
+			cl.getFunc = func(obj interface{}, namespace, name string) error {
+				if obj, ok := obj.(*v1alpha1.ImagePolicy); ok {
+					obj.Status = v1alpha1.ImagePolicyStatus{
+						Releases: []v1alpha1.Release{
+							{
+								Level: v1alpha1.SemVerLevelPreview,
+								SemVer: &v1alpha1.SemVerRelease{
+									Name:    "pr-branch",
+									Version: "46ef87b86b66a301c3ac1f072d630d08bbd77420",
+								},
+							},
+						},
+					}
+
+					return nil
+				}
+
+				// object will already be patched, no need to refresh in tests
+				if _, ok := obj.(*v1alpha1.VersionedMicroservice); ok {
+					return nil
+				}
+
+				return errors.New("Object not supported")
+			}
+
+			cl.applyFunc = func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
+				if vsvc, vok := obj.(*v1alpha1.VersionedMicroservice); vok {
+					expected := &v1alpha1.VersionedMicroservice{
+						TypeMeta: metav1.TypeMeta{
+							Kind:       "VersionedMicroservice",
+							APIVersion: "hlnr.io/v1alpha1",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      fullName,
+							Namespace: "testing",
+							Labels: map[string]string{
+								"hlnr.io/microservice.full_name": fullName,
+								"hlnr.io/microservice.name":      "test-deploy",
+								"hlnr.io/microservice.release":   "pr-branch",
+								"hlnr.io/microservice.version":   "46ef87b86b66a301c3ac1f072d630d08bbd77420",
+								"hlnr.io/service":                "test-deploy",
+							},
+							OwnerReferences: vsvc.OwnerReferences, // XXX test nicely
+						},
+						Spec: v1alpha1.VersionedMicroserviceSpec{
+							Containers: []v1.Container{
+								{
+									Name:            "test-deploy",
+									ImagePullPolicy: v1.PullIfNotPresent,
+								},
+							},
+						},
+					}
+
+					if !reflect.DeepEqual(vsvc, expected) {
+						t.Errorf("Expected %T to equal %T", vsvc, expected)
+					}
+				}
+
+				if svc, ok := obj.(*v1alpha1.Microservice); ok {
+					if l := len(svc.Status.Releases); l != 1 {
+						t.Errorf("Expected 1 release, got %d", l)
+					}
+				}
+
+				return nil, nil
+			}
+
+			err := ctrl.patchMicroservice(deploy)
+			if err != nil {
+				t.Errorf("Expected no error, got %s", err)
+			}
+		})
+
+	})
 }
 
 type kubekitClient struct {
 	applyFunc  func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error)
 	getFunc    func(obj interface{}, namespace, name string) error
 	deleteFunc func(runtime.Object, ...patcher.OptionFunc) error
+}
+
+func (c *kubekitClient) flush() {
+	c.applyFunc = nil
+	c.getFunc = nil
+	c.deleteFunc = nil
 }
 
 func (c *kubekitClient) Apply(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
