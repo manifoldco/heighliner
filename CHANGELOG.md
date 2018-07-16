@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [0.1.1] - 2018-07-16
+
 ### Added
 - Introduce an optional `match` field for ImagePolicy to control how releases
   map to container images, based on container image tag name, labels, or both.
 
-## v0.1.0
+## [0.1.0] - 2018-07-13
 
 Docker Image: [arigato/heighliner:0.1.0](https://hub.docker.com/r/arigato/heighliner/tags)
 
