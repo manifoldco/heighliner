@@ -93,7 +93,7 @@ spec:
       name: cool-repository
 ```
 
-## Configure a Network Policy
+### Configure a Network Policy
 
 The network policy resource handles exposing instances of versioned
 microservices within the cluster, or to the outside world. `domain` can be
@@ -119,7 +119,7 @@ spec:
     latest: {}
 ```
 
-## Configure a  Microservice
+### Configure a  Microservice
 
 The microservice resource is a template for deployments of images that match the
 image policy.
@@ -133,3 +133,12 @@ spec:
   imagePolicy:
     name: my-image-policy
 ```
+
+## Contributing
+
+Thanks for taking the time to join the community and helping out!
+
+- Please familiarize yourself with the [Code of Conduct](./CODE_OF_CONDUCT.md)
+  before contributing.
+- Look at our [Contributing Guidelines](./CONTRIBUTING.md) for more infirmation
+  about setting up your environment and how to contribute.
