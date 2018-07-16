@@ -236,9 +236,6 @@ var matchValidationSchema = v1beta1.JSONSchemaProps{
 		"name": mappingValidationSchema,
 		"labels": {
 			Type: "object",
-			AdditionalProperties: &v1beta1.JSONSchemaPropsOrBool{
-				Schema: &mappingValidationSchema,
-			},
 		},
 	},
 }
