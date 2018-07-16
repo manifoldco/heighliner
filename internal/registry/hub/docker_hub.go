@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/docker/distribution/manifest/schema2"
@@ -155,9 +156,11 @@ func (c *Client) TagFor(repo string, release string, matcher *v1alpha1.ImagePoli
 }
 
 func normalizeErr(repo, release string, err error) error {
-	if t, ok := err.(*registry.HttpStatusError); ok {
-		if t.Response.StatusCode == http.StatusNotFound {
-			return reg.NewTagNotFoundError(repo, release)
+	if u, ok := err.(*url.Error); ok {
+		if t, ok := u.Err.(*registry.HttpStatusError); ok {
+			if t.Response.StatusCode == http.StatusNotFound {
+				return reg.NewTagNotFoundError(repo, release)
+			}
 		}
 	}
 

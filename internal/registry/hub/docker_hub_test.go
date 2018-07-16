@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -118,7 +119,7 @@ func TestClientTagFor(t *testing.T) {
 			reg.NewTagNotFoundError("testrepo", "v1.0.0"),
 			nil, nil,
 			map[string]*schema2.DeserializedManifest{"v1.0.0": nil},
-			&registry.HttpStatusError{Response: &http.Response{StatusCode: 404}},
+			&url.Error{Err: &registry.HttpStatusError{Response: &http.Response{StatusCode: 404}}},
 			nil, nil, nil,
 		},
 
