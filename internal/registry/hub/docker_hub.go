@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/heroku/docker-registry-client/registry"
@@ -45,12 +46,15 @@ func New(secret *v1.Secret) (*Client, error) {
 		return nil, err
 	}
 
-	c, err := registry.New(dockerHubRegistryURL, u, p)
-	if err != nil {
-		return nil, err
+	url := strings.TrimSuffix(dockerHubRegistryURL, "/")
+	transport := registry.WrapTransport(http.DefaultTransport, url, u, p)
+	c := &registry.Registry{
+		URL: url,
+		Client: &http.Client{
+			Transport: transport,
+		},
+		Logf: registry.Quiet,
 	}
-
-	c.Logf = registry.Quiet
 
 	return &Client{c: c}, nil
 }

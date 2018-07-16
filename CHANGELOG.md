@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 - Fix image mapping by name only.
 - Relax ImagePolicy CRD validation so it can be installed.
+- Eliminate registry ping log message
 
 ## [0.1.1] - 2018-07-16
 
