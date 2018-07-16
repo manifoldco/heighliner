@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/jelmersnoeck/kubekit"
-	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/meta"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

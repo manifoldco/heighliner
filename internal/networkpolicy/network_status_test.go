@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/v1alpha1"
 )
 
 func TestNetworkStatus(t *testing.T) {

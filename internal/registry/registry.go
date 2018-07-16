@@ -2,7 +2,7 @@ package registry
 
 import (
 	"fmt"
-	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/v1alpha1"
 )
 
 // Registry represents the interface any registry needs to provide to query it.

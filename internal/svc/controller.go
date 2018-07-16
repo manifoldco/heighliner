@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/k8sutils"
 	"github.com/manifoldco/heighliner/internal/meta"
 
@@ -22,6 +22,12 @@ import (
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
 
+type patchClient interface {
+	Apply(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error)
+	Delete(runtime.Object, ...patcher.OptionFunc) error
+	Get(obj interface{}, namespace, name string) error
+}
+
 // Controller represents the MicroserviceController. This controller
 // takes care of creating, updating and deleting lower level Kubernetese
 // components that are associated with a specific Microservice.
@@ -29,7 +35,7 @@ type Controller struct {
 	rc        *rest.RESTClient
 	cs        kubernetes.Interface
 	namespace string
-	patcher   *patcher.Patcher
+	patcher   patchClient
 }
 
 // NewController returns a new Microservice Controller.

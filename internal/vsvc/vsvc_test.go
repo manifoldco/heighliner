@@ -3,7 +3,7 @@ package vsvc_test
 import (
 	"testing"
 
-	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/vsvc"
 
 	"github.com/jelmersnoeck/kubekit/kubetest"

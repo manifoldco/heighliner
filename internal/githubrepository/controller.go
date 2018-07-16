@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/github"
-	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/k8sutils"
 	"github.com/manifoldco/heighliner/internal/networkpolicy"
 	"golang.org/x/oauth2"
