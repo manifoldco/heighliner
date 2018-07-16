@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"testing"
@@ -94,7 +95,7 @@ func TestClientTagFor(t *testing.T) {
 		tags   []string
 		tagErr error
 
-		manifests   []*schema2.DeserializedManifest
+		manifests   map[string]*schema2.DeserializedManifest
 		manifestErr error
 
 		labels   []string
@@ -103,10 +104,11 @@ func TestClientTagFor(t *testing.T) {
 		match *v1alpha1.ImagePolicyMatch
 	}{
 		{"ok", "v1.0.0", nil, nil, nil,
-			[]*schema2.DeserializedManifest{{}},
+			map[string]*schema2.DeserializedManifest{"v1.0.0": {}},
 			nil, nil, nil, nil},
 		{"can map and lookup on name", "1.0.0", nil, nil, nil,
-			[]*schema2.DeserializedManifest{{}}, nil, nil, nil,
+			map[string]*schema2.DeserializedManifest{"1.0.0": {}},
+			nil, nil, nil,
 			&v1alpha1.ImagePolicyMatch{
 				Name: &v1alpha1.ImagePolicyMatchMapping{From: "v{{.Tag}}"},
 			},
@@ -115,15 +117,17 @@ func TestClientTagFor(t *testing.T) {
 		{
 			"manifest not found", "",
 			reg.NewTagNotFoundError("testrepo", "v1.0.0"),
-			nil, nil, nil,
-			&registry.HttpStatusError{Response: &http.Response{StatusCode: 404}},
+			nil, nil,
+			map[string]*schema2.DeserializedManifest{"v1.0.0": nil},
+			&url.Error{Err: &registry.HttpStatusError{Response: &http.Response{StatusCode: 404}}},
 			nil, nil, nil,
 		},
 
 		{
 			"registry 500 on manifest lookup", "",
 			&registry.HttpStatusError{Response: &http.Response{StatusCode: 500}},
-			nil, nil, nil,
+			nil, nil,
+			map[string]*schema2.DeserializedManifest{"v1.0.0": nil},
 			&registry.HttpStatusError{Response: &http.Response{StatusCode: 500}},
 			nil, nil, nil,
 		},
@@ -131,7 +135,8 @@ func TestClientTagFor(t *testing.T) {
 		{
 			"registry non-http error on manifest lookup", "",
 			errors.New("bad"),
-			nil, nil, nil,
+			nil, nil,
+			map[string]*schema2.DeserializedManifest{"v1.0.0": nil},
 			errors.New("bad"),
 			nil, nil, nil,
 		},
@@ -139,7 +144,7 @@ func TestClientTagFor(t *testing.T) {
 		{
 			"can match by label", "v1.0.0", nil,
 			[]string{"v1.0.0"}, nil,
-			[]*schema2.DeserializedManifest{{}}, nil,
+			map[string]*schema2.DeserializedManifest{"v1.0.0": {}}, nil,
 			[]string{`{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`}, nil,
 			&v1alpha1.ImagePolicyMatch{
 				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
@@ -152,7 +157,7 @@ func TestClientTagFor(t *testing.T) {
 			"can exclude by label", "",
 			reg.NewTagNotFoundError("testrepo", "v1.0.0"),
 			[]string{"v1.0.0"}, nil,
-			[]*schema2.DeserializedManifest{{}}, nil,
+			map[string]*schema2.DeserializedManifest{"v1.0.0": {}}, nil,
 			[]string{`{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`}, nil,
 			&v1alpha1.ImagePolicyMatch{
 				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
@@ -164,7 +169,11 @@ func TestClientTagFor(t *testing.T) {
 		{
 			"can match by label from many", "v1.0.0", nil,
 			[]string{"v2.0.0", "v1.0.0", "v0.0.1"}, nil,
-			[]*schema2.DeserializedManifest{{}, {}, {}}, nil,
+			map[string]*schema2.DeserializedManifest{
+				"v2.0.0": {},
+				"v1.0.0": {},
+				"v0.0.1": {},
+			}, nil,
 			[]string{
 				`{ "container_config": { "Labels": { "org.fake.other.label": "v1.0.0" } } }`,
 				`{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`,
@@ -194,7 +203,7 @@ func TestClientTagFor(t *testing.T) {
 			"propagates config download error", "",
 			errors.New("bad"),
 			[]string{"v1.0.0"}, nil,
-			[]*schema2.DeserializedManifest{{}}, nil,
+			map[string]*schema2.DeserializedManifest{"v1.0.0": {}}, nil,
 			[]string{``}, errors.New("bad"),
 			&v1alpha1.ImagePolicyMatch{
 				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
@@ -210,13 +219,19 @@ func TestClientTagFor(t *testing.T) {
 			ms := make(map[string]*schema2.DeserializedManifest)
 			ls := make(map[string]string)
 
-			for i := range tc.tags {
-				ms[tc.tags[i]] = tc.manifests[i]
-				if tc.manifests[i] != nil {
+			var i int
+			for k, v := range tc.manifests {
+				if v != nil {
 					dig := digest.Digest(fmt.Sprintf("%d", i))
-					tc.manifests[i].Config.Digest = dig
-					ls[string(dig)] = tc.labels[i]
+					v.Config.Digest = dig
+
+					if len(tc.labels) > i {
+						ls[string(dig)] = tc.labels[i]
+					}
 				}
+
+				ms[k] = v
+				i++
 			}
 
 			c := &Client{c: testRegistry{
@@ -256,7 +271,12 @@ func (t testRegistry) Tags(repository string) ([]string, error) {
 }
 
 func (t testRegistry) ManifestV2(repository, image string) (*schema2.DeserializedManifest, error) {
-	return t.m[image], t.me
+	dm, ok := t.m[image]
+	if !ok {
+		return nil, errors.New("asked for an image the tests didn't know about: " + image)
+	}
+
+	return dm, t.me
 }
 
 func (t testRegistry) DownloadLayer(repository string, dig digest.Digest) (io.ReadCloser, error) {

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/heroku/docker-registry-client/registry"
@@ -45,12 +47,15 @@ func New(secret *v1.Secret) (*Client, error) {
 		return nil, err
 	}
 
-	c, err := registry.New(dockerHubRegistryURL, u, p)
-	if err != nil {
-		return nil, err
+	url := strings.TrimSuffix(dockerHubRegistryURL, "/")
+	transport := registry.WrapTransport(http.DefaultTransport, url, u, p)
+	c := &registry.Registry{
+		URL: url,
+		Client: &http.Client{
+			Transport: transport,
+		},
+		Logf: registry.Quiet,
 	}
-
-	c.Logf = registry.Quiet
 
 	return &Client{c: c}, nil
 }
@@ -99,7 +104,7 @@ func (c *Client) TagFor(repo string, release string, matcher *v1alpha1.ImagePoli
 
 	hasName, hasLabels := matcher.Config()
 
-	ts := []string{release}
+	ts := []string{}
 
 	if hasName {
 		n, err := matcher.MapName(release)
@@ -151,9 +156,11 @@ func (c *Client) TagFor(repo string, release string, matcher *v1alpha1.ImagePoli
 }
 
 func normalizeErr(repo, release string, err error) error {
-	if t, ok := err.(*registry.HttpStatusError); ok {
-		if t.Response.StatusCode == http.StatusNotFound {
-			return reg.NewTagNotFoundError(repo, release)
+	if u, ok := err.(*url.Error); ok {
+		if t, ok := u.Err.(*registry.HttpStatusError); ok {
+			if t.Response.StatusCode == http.StatusNotFound {
+				return reg.NewTagNotFoundError(repo, release)
+			}
 		}
 	}
 
