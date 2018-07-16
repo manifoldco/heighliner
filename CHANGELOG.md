@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 ### Fixed
+- Fix image mapping by name only.
 - Relax ImagePolicy CRD validation so it can be installed.
 
 ## [0.1.1] - 2018-07-16

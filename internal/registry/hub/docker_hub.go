@@ -99,7 +99,7 @@ func (c *Client) TagFor(repo string, release string, matcher *v1alpha1.ImagePoli
 
 	hasName, hasLabels := matcher.Config()
 
-	ts := []string{release}
+	ts := []string{}
 
 	if hasName {
 		n, err := matcher.MapName(release)
