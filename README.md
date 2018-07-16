@@ -8,10 +8,7 @@
 > A Heighliner is truly big. Its hold will tuck all of our frigates and transports
 > into a little corner-we'll be just one small part of the ship's manifest.
 
-Heighliner aims to make your workflow with GitHub and Kubernetes easy. It allows
-you to automatically deploys Pull Requests Review applications to your cluster
-and use GitHub Releases to automatically deploy to your staging and production
-environments.
+Heighliner aims to make your workflow with GitHub and Kubernetes easy. Automatically deploy previews of GitHub pull requests to your cluster and use GitHub Releases to deploy to staging and production.
 
 **Warning**: this project is still under heavy development and is not
 recommended for production usage yet. Breaking changes might occur until v1.0.0.
