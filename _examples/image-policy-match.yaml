@@ -1,0 +1,73 @@
+# These ImagePolicies demonstrate how to use the `match` field to select
+# container images.
+# All examples here assume the Secret and VersioningPolicy from
+# `image-policy.yaml` exist.
+
+# This is the default match configuration. If no value is set, Heighliner
+# attempts to find tags in the container registry that have the same name
+# as any GitHub releases that have passed through the VersioningPolicy.
+apiVersion: hlnr.io/v1alpha1
+kind: ImagePolicy
+metadata:
+  name: default-match
+spec:
+  image: your/demo-application
+  imagePullSecrets:
+  - name: docker-registry
+  versioningPolicy:
+    name: previews
+  filter:
+    github:
+      name: demo-application
+  match:
+    name:
+      from: "{{.Tag}}"
+      to: "{{.Tag}}"
+
+---
+
+# This configuration uses pattern matching and templating. Heighliner will
+# find a release with the tag `v1.0.0` (for example) and match it to a tag in the
+# container registry with the value `cool-1.0.0`.
+apiVersion: hlnr.io/v1alpha1
+kind: ImagePolicy
+metadata:
+  name: convert-name
+spec:
+  image: your/demo-application
+  imagePullSecrets:
+  - name: docker-registry
+  versioningPolicy:
+    name: previews
+  filter:
+    github:
+      name: demo-application
+  match:
+    name:
+      from: "v{{.Tag}}"
+      to: "cool-{{.Tag}}"
+
+---
+
+# This configuration uses label matching. You can match on any number of lables,
+# with or without name. If a given label does not exist on a container image,
+# it will not match.
+#
+# If a match value is the empty object `{}`, it is treated as an identity
+# mapping, as in the default value.
+apiVersion: hlnr.io/v1alpha1
+kind: ImagePolicy
+metadata:
+  name: convert-name
+spec:
+  image: your/demo-application
+  imagePullSecrets:
+  - name: docker-registry
+  versioningPolicy:
+    name: previews
+  filter:
+    github:
+      name: demo-application
+  match:
+    labels:
+      org.me.my-tag-label: {}
