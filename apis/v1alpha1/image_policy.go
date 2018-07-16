@@ -63,6 +63,19 @@ type ImagePolicyStatus struct {
 type ImagePolicyMatch struct {
 	// Name defines a match on the image tag name.
 	Name *ImagePolicyMatchMapping `json:"name,omitempty"`
+
+	// Labels defines matches on image labels.
+	Labels map[string]ImagePolicyMatchMapping `json:"labels,omitempty"`
+}
+
+// Config returns two booleans indicating if there is name matching and label
+// matching in this match.
+func (m *ImagePolicyMatch) Config() (bool, bool) {
+	if m == nil || (m.Name == nil && len(m.Labels) == 0) {
+		m = defaultImagePolicyMatch
+	}
+
+	return m.Name != nil, len(m.Labels) > 0
 }
 
 // MapName returns the Name mapping for the provided release value.
@@ -74,6 +87,46 @@ func (m *ImagePolicyMatch) MapName(release string) (string, error) {
 
 	mapped, err := m.Name.Map(release)
 	return mapped, err
+}
+
+// Matches returns a bool indicating if the provided image tag and labels match
+// this match stanza. It returns an error if any of the match mappings error.
+// If m is nil or the zero value, it uses the default match value of:
+//   match:
+//     name:
+//       from: "{{.Tag}}"
+//       to: "{{.Tag}}"
+func (m *ImagePolicyMatch) Matches(release, tag string, labels map[string]string) (bool, error) {
+	if m == nil || (m.Name == nil && len(m.Labels) == 0) {
+		m = defaultImagePolicyMatch
+	}
+
+	if m.Name != nil {
+		mapped, err := m.Name.Map(release)
+		if err != nil {
+			return false, err
+		}
+		if mapped != tag {
+			return false, nil
+		}
+	}
+
+	for l, lm := range m.Labels {
+		t, ok := labels[l]
+		if !ok {
+			return false, nil
+		}
+
+		mapped, err := lm.Map(release)
+		if err != nil {
+			return false, err
+		}
+		if mapped != t {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 // ImagePolicyMatchMapping defines how a release is transformed to match an
@@ -181,6 +234,12 @@ var matchValidationSchema = v1beta1.JSONSchemaProps{
 	Type: "object",
 	Properties: map[string]v1beta1.JSONSchemaProps{
 		"name": mappingValidationSchema,
+		"labels": {
+			Type: "object",
+			AdditionalProperties: &v1beta1.JSONSchemaPropsOrBool{
+				Schema: &mappingValidationSchema,
+			},
+		},
 	},
 }
 
