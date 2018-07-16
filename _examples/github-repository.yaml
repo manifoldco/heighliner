@@ -6,7 +6,7 @@ metadata:
   name: gh-token-demo-application
 type: Opaque
 data:
-  # Base64 encoded GH API token
+  # Example: "GH API token" Base64 encoded
   GITHUB_AUTH_TOKEN: YmFzZTY0IGVuY29kZWQgR0ggQVBJIHRva2Vu
 
 ---
