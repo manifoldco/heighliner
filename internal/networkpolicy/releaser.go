@@ -3,7 +3,7 @@ package networkpolicy
 import (
 	"errors"
 
-	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/v1alpha1"
 )
 
 // LatestReleaser is able to select a release based on the releasetime date.

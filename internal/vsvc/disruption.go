@@ -3,7 +3,7 @@ package vsvc
 import (
 	"errors"
 
-	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/meta"
 
 	"github.com/jelmersnoeck/kubekit"

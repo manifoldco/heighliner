@@ -2,7 +2,7 @@
 package vsvc
 
 import (
-	"github.com/manifoldco/heighliner/internal/api/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/v1alpha1"
 
 	"github.com/jelmersnoeck/kubekit"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
