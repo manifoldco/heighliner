@@ -2,3 +2,6 @@
 /bin/
 /build/
 coverage.txt
+
+cover.out
+cover.html

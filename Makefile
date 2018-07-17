@@ -46,6 +46,11 @@ test: vendor
 cover: vendor
 	CGO_ENABLED=0 go test -v -coverprofile=coverage.txt -covermode=atomic ./...
 
+cover-html: vendor
+	CGO_ENABLED=0 go test -coverprofile cover.out ./...
+	go tool cover -html=cover.out -o cover.html
+	open cover.html
+
 lint: $(LINTERS)
 
 $(LINTERS): vendor
