@@ -8,6 +8,7 @@ import (
 
 	"github.com/jelmersnoeck/kubekit/patcher"
 	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/internal/tester"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -132,8 +133,8 @@ func TestDeprecatedReleases(t *testing.T) {
 }
 
 func TestDeprecateReleases(t *testing.T) {
-	cl := &kubekitClient{}
-	cl.deleteFunc = func(obj runtime.Object, objs ...patcher.OptionFunc) error {
+	cl := new(tester.PatchClient)
+	cl.DeleteFunc = func(obj runtime.Object, objs ...patcher.OptionFunc) error {
 		vsvc := obj.(*v1alpha1.VersionedMicroservice)
 		expected := "test-service-1mpl3547"
 		if vsvc.Name != expected {
@@ -202,7 +203,7 @@ func TestDeprecateReleases(t *testing.T) {
 }
 
 func TestController_PatchMicroservice(t *testing.T) {
-	cl := new(kubekitClient)
+	cl := new(tester.PatchClient)
 	ctrl := &Controller{patcher: cl}
 	deploy := &v1alpha1.Microservice{
 		ObjectMeta: metav1.ObjectMeta{
@@ -214,9 +215,9 @@ func TestController_PatchMicroservice(t *testing.T) {
 	}
 
 	t.Run("without releases", func(t *testing.T) {
-		defer cl.flush()
+		defer cl.Flush()
 
-		cl.getFunc = func(obj interface{}, namespace, name string) error {
+		cl.GetFunc = func(obj interface{}, namespace, name string) error {
 			if obj, ok := obj.(*v1alpha1.ImagePolicy); ok {
 				obj.Status = v1alpha1.ImagePolicyStatus{
 					Releases: []v1alpha1.Release{},
@@ -228,7 +229,7 @@ func TestController_PatchMicroservice(t *testing.T) {
 			return errors.New("Object not supported")
 		}
 
-		cl.applyFunc = func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
+		cl.ApplyFunc = func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
 			msvc := obj.(*v1alpha1.Microservice)
 			if len(msvc.Status.Releases) > 0 {
 				t.Errorf("Expected no releases to be set up")
@@ -245,10 +246,10 @@ func TestController_PatchMicroservice(t *testing.T) {
 
 	t.Run("with a release", func(t *testing.T) {
 		t.Run("without extra config", func(t *testing.T) {
-			defer cl.flush()
+			defer cl.Flush()
 
 			fullName := "test-deploy-pr-2l6fggiv-ribi3jce"
-			cl.getFunc = func(obj interface{}, namespace, name string) error {
+			cl.GetFunc = func(obj interface{}, namespace, name string) error {
 				if obj, ok := obj.(*v1alpha1.ImagePolicy); ok {
 					obj.Spec = v1alpha1.ImagePolicySpec{
 						Image: "manifoldco/heighliner-testing",
@@ -276,7 +277,7 @@ func TestController_PatchMicroservice(t *testing.T) {
 				return errors.New("Object not supported")
 			}
 
-			cl.applyFunc = func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
+			cl.ApplyFunc = func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
 				if vsvc, vok := obj.(*v1alpha1.VersionedMicroservice); vok {
 					expected := &v1alpha1.VersionedMicroservice{
 						TypeMeta: metav1.TypeMeta{
@@ -327,7 +328,7 @@ func TestController_PatchMicroservice(t *testing.T) {
 		})
 
 		t.Run("with extra config", func(t *testing.T) {
-			defer cl.flush()
+			defer cl.Flush()
 			defer func() {
 				deploy.Annotations = map[string]string{}
 				deploy.Labels = map[string]string{}
@@ -373,7 +374,7 @@ func TestController_PatchMicroservice(t *testing.T) {
 			}
 
 			fullName := "test-deploy-pr-2l6fggiv-ribi3jce"
-			cl.getFunc = func(obj interface{}, namespace, name string) error {
+			cl.GetFunc = func(obj interface{}, namespace, name string) error {
 				switch obj := obj.(type) {
 				case *v1alpha1.ImagePolicy:
 					obj.Spec = imagePolicySpec
@@ -409,7 +410,7 @@ func TestController_PatchMicroservice(t *testing.T) {
 				return fmt.Errorf("Object of type %T not supported", obj)
 			}
 
-			cl.applyFunc = func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
+			cl.ApplyFunc = func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
 				if vsvc, vok := obj.(*v1alpha1.VersionedMicroservice); vok {
 					expected := &v1alpha1.VersionedMicroservice{
 						TypeMeta: metav1.TypeMeta{
@@ -467,28 +468,4 @@ func TestController_PatchMicroservice(t *testing.T) {
 			}
 		})
 	})
-}
-
-type kubekitClient struct {
-	applyFunc  func(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error)
-	getFunc    func(obj interface{}, namespace, name string) error
-	deleteFunc func(runtime.Object, ...patcher.OptionFunc) error
-}
-
-func (c *kubekitClient) flush() {
-	c.applyFunc = nil
-	c.getFunc = nil
-	c.deleteFunc = nil
-}
-
-func (c *kubekitClient) Apply(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
-	return c.applyFunc(obj, opts...)
-}
-
-func (c *kubekitClient) Get(obj interface{}, namespace, name string) error {
-	return c.getFunc(obj, namespace, name)
-}
-
-func (c *kubekitClient) Delete(obj runtime.Object, ops ...patcher.OptionFunc) error {
-	return c.deleteFunc(obj, ops...)
 }

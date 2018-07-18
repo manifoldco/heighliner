@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	clientv1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
@@ -26,9 +27,14 @@ import (
 // components that are associated with a specific Microservice.
 type Controller struct {
 	rc        *rest.RESTClient
-	cs        kubernetes.Interface
+	cs        clientv1.CoreV1Interface
 	namespace string
-	patcher   *patcher.Patcher
+	patcher   patchClient
+}
+
+type patchClient interface {
+	Get(interface{}, string, string) error
+	Apply(runtime.Object, ...patcher.OptionFunc) ([]byte, error)
 }
 
 // NewController returns a new NetworkPolicy Controller.
@@ -39,7 +45,7 @@ func NewController(cfg *rest.Config, cs kubernetes.Interface, namespace string) 
 	}
 
 	return &Controller{
-		cs:        cs,
+		cs:        cs.Core(),
 		rc:        rc,
 		namespace: namespace,
 		patcher:   patcher.New("hlnr-network-policy", cmdutil.NewFactory(nil)),
@@ -141,12 +147,7 @@ func (c *Controller) syncNetworking(obj interface{}) error {
 	return nil
 }
 
-type patchClient interface {
-	getClient
-	Apply(runtime.Object, ...patcher.OptionFunc) ([]byte, error)
-}
-
-func syncReleaseGroup(cs kubernetes.Interface, cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
+func syncReleaseGroup(cs clientv1.CoreV1Interface, cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) error {
 	if len(np.Spec.Ports) != 0 {
 		for _, release := range releases {
 			_, err := createOrReplaceService(cs, cl, svc, np, &release, release.FullName(svc.Name))
@@ -159,7 +160,7 @@ func syncReleaseGroup(cs kubernetes.Interface, cl patchClient, svc *v1alpha1.Mic
 	return nil
 }
 
-func syncSelectedRelease(cs kubernetes.Interface, cl patchClient, ms *v1alpha1.Microservice, networkPolicy *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) ([]v1alpha1.Domain, error) {
+func syncSelectedRelease(cs clientv1.CoreV1Interface, cl patchClient, ms *v1alpha1.Microservice, networkPolicy *v1alpha1.NetworkPolicy, releases []v1alpha1.Release) ([]v1alpha1.Domain, error) {
 	np := networkPolicy.DeepCopy()
 
 	// TODO(jelmer): this should come from a factory based on the update strategy.
@@ -195,7 +196,7 @@ func syncSelectedRelease(cs kubernetes.Interface, cl patchClient, ms *v1alpha1.M
 // createOrReplaceService will either create a new service instance, or do a full
 // replacement of one if it exists, performing changes on the existing one.
 // it does not use PATCH, as we need to fully replace the OwnerReferences.
-func createOrReplaceService(cs kubernetes.Interface, cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release, srvName string) (*v1.Service, error) {
+func createOrReplaceService(cs clientv1.CoreV1Interface, cl patchClient, svc *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release, srvName string) (*v1.Service, error) {
 	if len(np.Spec.Ports) == 0 {
 		return nil, nil
 	}
@@ -223,9 +224,9 @@ func createOrReplaceService(cs kubernetes.Interface, cl patchClient, svc *v1alph
 	srv = buildServiceForRelease(srv, svc, np, release)
 
 	if create {
-		srv, err = cs.Core().Services(srv.Namespace).Create(srv)
+		srv, err = cs.Services(srv.Namespace).Create(srv)
 	} else {
-		srv, err = cs.Core().Services(srv.Namespace).Update(srv)
+		srv, err = cs.Services(srv.Namespace).Update(srv)
 	}
 	if err != nil {
 		log.Printf("Error syncing service for release %s: %s", np.Name, err)
@@ -248,11 +249,7 @@ func groupReleases(name string, releases []v1alpha1.Release) map[string][]v1alph
 	return grouped
 }
 
-type getClient interface {
-	Get(interface{}, string, string) error
-}
-
-func getMicroservice(cl getClient, np *v1alpha1.NetworkPolicy) (*v1alpha1.Microservice, error) {
+func getMicroservice(cl patchClient, np *v1alpha1.NetworkPolicy) (*v1alpha1.Microservice, error) {
 	ms := &v1alpha1.Microservice{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Microservice",
