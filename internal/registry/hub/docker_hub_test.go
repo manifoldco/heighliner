@@ -98,7 +98,7 @@ func TestClientTagFor(t *testing.T) {
 		manifests   map[string]*schema2.DeserializedManifest
 		manifestErr error
 
-		labels   []string
+		labels   map[string]string
 		labelErr error
 
 		match *v1alpha1.ImagePolicyMatch
@@ -145,7 +145,9 @@ func TestClientTagFor(t *testing.T) {
 			"can match by label", "v1.0.0", nil,
 			[]string{"v1.0.0"}, nil,
 			map[string]*schema2.DeserializedManifest{"v1.0.0": {}}, nil,
-			[]string{`{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`}, nil,
+			map[string]string{
+				"v1.0.0": `{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`,
+			}, nil,
 			&v1alpha1.ImagePolicyMatch{
 				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
 					"org.fake.label": {},
@@ -158,7 +160,9 @@ func TestClientTagFor(t *testing.T) {
 			reg.NewTagNotFoundError("testrepo", "v1.0.0"),
 			[]string{"v1.0.0"}, nil,
 			map[string]*schema2.DeserializedManifest{"v1.0.0": {}}, nil,
-			[]string{`{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`}, nil,
+			map[string]string{
+				"v1.0.0": `{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`,
+			}, nil,
 			&v1alpha1.ImagePolicyMatch{
 				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
 					"org.fake.other.label": {},
@@ -174,10 +178,10 @@ func TestClientTagFor(t *testing.T) {
 				"v1.0.0": {},
 				"v0.0.1": {},
 			}, nil,
-			[]string{
-				`{ "container_config": { "Labels": { "org.fake.other.label": "v1.0.0" } } }`,
-				`{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`,
-				`{ "container_config": { "Labels": {} } }`,
+			map[string]string{
+				"v2.0.0": `{ "container_config": { "Labels": { "org.fake.other.label": "v1.0.0" } } }`,
+				"v1.0.0": `{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`,
+				"v0.0.1": `{ "container_config": { "Labels": {} } }`,
 			}, nil,
 			&v1alpha1.ImagePolicyMatch{
 				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
@@ -204,7 +208,7 @@ func TestClientTagFor(t *testing.T) {
 			errors.New("bad"),
 			[]string{"v1.0.0"}, nil,
 			map[string]*schema2.DeserializedManifest{"v1.0.0": {}}, nil,
-			[]string{``}, errors.New("bad"),
+			map[string]string{"v1.0.0": ``}, errors.New("bad"),
 			&v1alpha1.ImagePolicyMatch{
 				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
 					"org.fake.label": {},
@@ -225,8 +229,8 @@ func TestClientTagFor(t *testing.T) {
 					dig := digest.Digest(fmt.Sprintf("%d", i))
 					v.Config.Digest = dig
 
-					if len(tc.labels) > i {
-						ls[string(dig)] = tc.labels[i]
+					if v, ok := tc.labels[k]; ok {
+						ls[string(dig)] = v
 					}
 				}
 
