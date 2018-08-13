@@ -92,8 +92,11 @@ func (s *callbackServer) healthzHandler(w http.ResponseWriter, r *http.Request) 
 
 func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+	log.Printf("Handling payload for %s/%s", vars["owner"], vars["name"])
+
 	cbHook, ok := s.hookForRepo(vars["owner"], vars["name"])
 	if !ok {
+		log.Printf("No repository found for %s/%s", vars["owner"], vars["name"])
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404 Not Found"))
 		return
@@ -101,6 +104,7 @@ func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) 
 
 	payload, err := github.ValidatePayload(r, []byte(cbHook.hook.Secret))
 	if err != nil {
+		log.Printf("Could not validate payload for %s/%s: %s", vars["owner"], vars["name"], err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return
