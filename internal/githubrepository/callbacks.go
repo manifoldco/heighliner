@@ -66,6 +66,7 @@ type callbackHook struct {
 func (s *callbackServer) start(address string) {
 	hdlr := mux.NewRouter()
 	hdlr.HandleFunc("/payload/{owner}/{name}", s.payloadHandler)
+	hdlr.HandleFunc("/_healtz", s.healthzHandler)
 
 	s.srv = &http.Server{
 		Handler:      hdlr,
@@ -84,10 +85,18 @@ func (s *callbackServer) stop(ctx context.Context) error {
 	return s.srv.Shutdown(ctx)
 }
 
+func (s *callbackServer) healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK!"))
+}
+
 func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+	log.Printf("Handling payload for %s/%s", vars["owner"], vars["name"])
+
 	cbHook, ok := s.hookForRepo(vars["owner"], vars["name"])
 	if !ok {
+		log.Printf("No repository found for %s/%s", vars["owner"], vars["name"])
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("404 Not Found"))
 		return
@@ -95,6 +104,7 @@ func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) 
 
 	payload, err := github.ValidatePayload(r, []byte(cbHook.hook.Secret))
 	if err != nil {
+		log.Printf("Could not validate payload for %s/%s: %s", vars["owner"], vars["name"], err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 		return

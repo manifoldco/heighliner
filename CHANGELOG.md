@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- Added a health check for the GitHub Callback Server.
+- Added logging to indicate GH Callback Server requests.
+
 ## [0.1.2] - 2018-07-16
 
 ### Fixed
