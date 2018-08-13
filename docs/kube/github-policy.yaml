@@ -72,6 +72,18 @@ spec:
             requests:
               cpu: 100m
               memory: 10Mi
+          readinessProbe:
+            httpGet:
+              path: /_healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /_healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 3
 
 ---
 

@@ -66,6 +66,7 @@ type callbackHook struct {
 func (s *callbackServer) start(address string) {
 	hdlr := mux.NewRouter()
 	hdlr.HandleFunc("/payload/{owner}/{name}", s.payloadHandler)
+	hdlr.HandleFunc("/_healtz", s.healthzHandler)
 
 	s.srv = &http.Server{
 		Handler:      hdlr,
@@ -82,6 +83,11 @@ func (s *callbackServer) start(address string) {
 
 func (s *callbackServer) stop(ctx context.Context) error {
 	return s.srv.Shutdown(ctx)
+}
+
+func (s *callbackServer) healthzHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK!"))
 }
 
 func (s *callbackServer) payloadHandler(w http.ResponseWriter, r *http.Request) {
