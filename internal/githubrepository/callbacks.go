@@ -66,7 +66,7 @@ type callbackHook struct {
 func (s *callbackServer) start(address string) {
 	hdlr := mux.NewRouter()
 	hdlr.HandleFunc("/payload/{owner}/{name}", s.payloadHandler)
-	hdlr.HandleFunc("/_healtz", s.healthzHandler)
+	hdlr.HandleFunc("/_healthz", s.healthzHandler)
 
 	s.srv = &http.Server{
 		Handler:      hdlr,
@@ -78,6 +78,7 @@ func (s *callbackServer) start(address string) {
 	// store incoming hooks on the server object
 	go s.storeHooks()
 
+	log.Printf("Listening on %s", address)
 	log.Fatal(s.srv.ListenAndServe())
 }
 
