@@ -87,7 +87,7 @@ DOCKER_REPOSITORY=arigato
 GOOS_OVERRIDE?=
 PREFIX?=
 
-GO_BUILD=CGO_ENABLED=0 go build -a -i
+GO_BUILD=CGO_ENABLED=0 go build -i
 DOCKER_MAKE=GOOS_OVERRIDE='GOOS=linux' PREFIX=build/docker/$1/ make build/docker/$1/bin/$1
 
 CMDs=$(sort $(patsubst cmd/%/,%,$(dir $(wildcard cmd/*/))))
