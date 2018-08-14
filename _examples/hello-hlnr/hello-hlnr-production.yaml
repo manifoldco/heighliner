@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+
+---
+
+apiVersion: hlnr.io/v1alpha1
+kind: VersioningPolicy
+metadata:
+  name: release-minor
+  namespace: production
+spec:
+  semVer:
+    version: minor
+    level: release
+
+---
+
+apiVersion: hlnr.io/v1alpha1
+kind: Microservice
+metadata:
+  name: hello-hlnr
+  namespace: production
+spec:
+  networkPolicy:
+    name: hello-hlnr
+  imagePolicy:
+    name: hello-hlnr
+
+---
+
+apiVersion: hlnr.io/v1alpha1
+kind: ImagePolicy
+metadata:
+  name: hello-hlnr
+  namespace: production
+spec:
+  image: manifoldco/hello-hlnr
+  imagePullSecrets:
+  - name: manifold-docker-registry
+    namespace: default
+  versioningPolicy:
+    name: release-minor
+  match:
+    name:
+      from: "v{{.Tag}}"
+  filter:
+    github:
+      name: heighliner
+      namespace: repos
+
+---
+
+apiVersion: hlnr.io/v1alpha1
+kind: NetworkPolicy
+metadata:
+  name: hello-hlnr
+  namespace: production
+spec:
+  microservice:
+    name: hello-hlnr
+  ports:
+  - name: headless
+    port: 80
+    targetPort: 8080
+  externalDNS:
+  - domain: "hello-hlnr.mywebsite"
+    port: headless
+    disableTLS: true
+    tlsGroup: manifold-websites-tls
+  updateStrategy:
+    latest: {}

@@ -165,7 +165,7 @@ release: $(DOCKER_RELEASES)
 #################################################
 # Building the examples
 #################################################
-EXAMPLES=hello-world
+EXAMPLES=hello-hlnr
 DOCKER_EXAMPLES=$(addprefix docker-,$(EXAMPLES))
 
 $(DOCKER_EXAMPLES):

@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: previews
+
+---
+
+apiVersion: hlnr.io/v1alpha1
+kind: VersioningPolicy
+metadata:
+  name: preview-minor
+  namespace: previews
+spec:
+  semVer:
+    version: minor
+    level: preview
+
+---
+
+apiVersion: hlnr.io/v1alpha1
+kind: Microservice
+metadata:
+  name: hello-hlnr
+  namespace: previews
+spec:
+  networkPolicy:
+    name: hello-hlnr
+  imagePolicy:
+    name: hello-hlnr
+
+---
+
+apiVersion: hlnr.io/v1alpha1
+kind: ImagePolicy
+metadata:
+  name: hello-hlnr
+  namespace: previews
+spec:
+  image: manifoldco/hello-hlnr
+  imagePullSecrets:
+  - name: manifold-docker-registry
+  versioningPolicy:
+    name: preview-minor
+  filter:
+    github:
+      name: heighliner
+      namespace: repos
+
+---
+
+apiVersion: hlnr.io/v1alpha1
+kind: NetworkPolicy
+metadata:
+  name: hello-hlnr
+  namespace: previews
+spec:
+  microservice:
+    name: hello-hlnr
+  ports:
+  - name: headless
+    port: 80
+    targetPort: 8080
+  externalDNS:
+  - domain: "{{.StreamName}}.arigato.tools"
+    port: headless
+    disableTLS: true # lets disable TLS for out previews :)
+  updateStrategy:
+    latest: {}

@@ -1,0 +1,11 @@
+apiVersion: hlnr.io/v1alpha1
+kind: GitHubRepository
+metadata:
+  name: heighliner
+  namespace: repos
+spec:
+  maxAvailable: 1
+  repo: heighliner
+  owner: manifoldco
+  configSecret:
+    name: hello-hlnr
