@@ -1,11 +1,22 @@
+#  This secret is your GH API ACCESS token set up with premissions according to [/docs/design/github-connector.md](/docs/design/github-connector.md)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: hello-hlnr
+type: Opaque
+data:
+  # This is an example: "GH API token" Base64 encoded
+  GITHUB_AUTH_TOKEN: YmFzZTY0IGVuY29kZWQgR0ggQVBJIHRva2Vu
+
+---
+
 apiVersion: hlnr.io/v1alpha1
 kind: GitHubRepository
 metadata:
   name: heighliner
-  namespace: repos
 spec:
   maxAvailable: 1
   repo: heighliner
   owner: manifoldco
   configSecret:
-    name: hello-hlnr
+    name: hello-hlnr 

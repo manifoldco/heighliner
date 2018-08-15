@@ -38,7 +38,7 @@ metadata:
 spec:
   image: manifoldco/hello-hlnr
   imagePullSecrets:
-  - name: manifold-docker-registry
+  - name: manifold-docker-registry # this will be your docker hub secrets for pulling images
   versioningPolicy:
     name: preview-minor
   filter:
