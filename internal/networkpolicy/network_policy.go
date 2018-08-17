@@ -11,14 +11,12 @@ var (
 	// NetworkPolicyResource describes the CRD networkuration for the
 	// NetworkPolicy CRD.
 	NetworkPolicyResource = kubekit.CustomResource{
-		Name:    "networkpolicy",
-		Plural:  "networkpolicies",
-		Group:   v1alpha1.GroupName,
-		Version: v1alpha1.Version,
-		Scope:   v1beta1.NamespaceScoped,
-		// TODO(jelmer): find appropriate alias that doesn't conflict with the
-		// default kubernetes network policy. Maybe needs a full rename.
-		Aliases:    []string{},
+		Name:       "networkpolicy",
+		Plural:     "networkpolicies",
+		Group:      v1alpha1.GroupName,
+		Version:    v1alpha1.Version,
+		Scope:      v1beta1.NamespaceScoped,
+		Aliases:    []string{"hnp"}, // hnp: heighliner network policy
 		Object:     &v1alpha1.NetworkPolicy{},
 		Validation: v1alpha1.NetworkPolicyValidationSchema,
 	}

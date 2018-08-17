@@ -32,9 +32,9 @@ running without much effort, but can be overridded for customization.
 ## Installation
 
 Heighliner consists out of multiple components, we've explained these in detail
-in the [design docs](docs/design/README.md).
+in the [design docs](docs/design/README.md) and in an [introductory blog post](https://medium.com/@jelmersnoeck/1fb233c577ad)
 
-For a full installation process, have a look at the [installation docs](docs/installation.md).
+For a full installation process, have a look at the [installation docs](docs/installation.md) or our [getting started guide](https://docs.manifold.co/docs/heighliner-hUPQ28TwKOayIOYmiCcKM)
 
 ## Usage
 
