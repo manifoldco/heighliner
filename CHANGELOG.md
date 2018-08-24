@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added a health check for the GitHub Callback Server.
 - Added logging to indicate GH Callback Server requests.
 
+### Fixed
+
+- Fixed the Makefile target for generating files.
+
 ## [0.1.2] - 2018-07-16
 
 ### Fixed
