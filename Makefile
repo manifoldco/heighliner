@@ -1,5 +1,5 @@
 PKG=github.com/manifoldco/heighliner
-API_VERSIONS=$(sort $(patsubst pkg/api/%/,%,$(dir $(wildcard pkg/api/*/))))
+API_VERSIONS=$(sort $(patsubst apis/%/,%,$(dir $(wildcard apis/*/))))
 
 ci: lint cover release
 .PHONY: ci
@@ -10,7 +10,7 @@ ci: lint cover release
 BOOTSTRAP=\
 	github.com/golang/dep/cmd/dep \
 	github.com/alecthomas/gometalinter \
-	github.com/jteeuwen/go-bindata
+	github.com/jteeuwen/go-bindata/go-bindata
 
 $(BOOTSTRAP):
 	go get -u $@
@@ -61,7 +61,7 @@ $(LINTERS): vendor
 #################################################
 # Create generated files
 #################################################
-GENERATED_FILES=$(API_VERSIONS:%=pkg/api/%/zz_generated.go)
+GENERATED_FILES=$(API_VERSIONS:%=apis/%/zz_generated.go)
 
 deepcopy-gen:
 	go get -u k8s.io/code-generator/cmd/deepcopy-gen
