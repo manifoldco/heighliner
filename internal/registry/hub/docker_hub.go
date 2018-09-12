@@ -133,6 +133,8 @@ func (c *Client) TagFor(repo string, release string, matcher *v1alpha1.ImagePoli
 				return "", normalizeErr(repo, release, err)
 			}
 
+			defer l.Close()
+
 			var c config
 			d := json.NewDecoder(l)
 			if err := d.Decode(&c); err != nil {
