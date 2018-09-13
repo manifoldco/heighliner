@@ -120,25 +120,46 @@ func TestClientTagFor(t *testing.T) {
 			nil, nil,
 			map[string]*schema2.DeserializedManifest{"v1.0.0": nil},
 			&url.Error{Err: &registry.HttpStatusError{Response: &http.Response{StatusCode: 404}}},
-			nil, nil, nil,
+			nil, nil,
+			&v1alpha1.ImagePolicyMatch{
+				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
+					"org.fake.label": {},
+				},
+			},
 		},
 
 		{
 			"registry 500 on manifest lookup", "",
 			&registry.HttpStatusError{Response: &http.Response{StatusCode: 500}},
-			nil, nil,
+			[]string{"v1.0.0"},
+			nil,
 			map[string]*schema2.DeserializedManifest{"v1.0.0": nil},
 			&registry.HttpStatusError{Response: &http.Response{StatusCode: 500}},
-			nil, nil, nil,
+			map[string]string{
+				"v1.0.0": `{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`,
+			}, nil,
+			&v1alpha1.ImagePolicyMatch{
+				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
+					"org.fake.label": {},
+				},
+			},
 		},
 
 		{
 			"registry non-http error on manifest lookup", "",
 			errors.New("bad"),
-			nil, nil,
+			[]string{"v1.0.0"},
+			nil,
 			map[string]*schema2.DeserializedManifest{"v1.0.0": nil},
 			errors.New("bad"),
-			nil, nil, nil,
+			map[string]string{
+				"v1.0.0": `{ "container_config": { "Labels": { "org.fake.label": "v1.0.0" } } }`,
+			}, nil,
+			&v1alpha1.ImagePolicyMatch{
+				Labels: map[string]v1alpha1.ImagePolicyMatchMapping{
+					"org.fake.label": {},
+				},
+			},
 		},
 
 		{

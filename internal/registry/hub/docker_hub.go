@@ -121,13 +121,13 @@ func (c *Client) TagFor(repo string, release string, matcher *v1alpha1.ImagePoli
 	}
 
 	for _, t := range ts {
-		m, err := c.c.ManifestV2(repo, t)
-		if err != nil {
-			return "", normalizeErr(repo, release, err)
-		}
-
 		var labels map[string]string
 		if hasLabels {
+			m, err := c.c.ManifestV2(repo, t)
+			if err != nil {
+				return "", normalizeErr(repo, release, err)
+			}
+
 			l, err := c.c.DownloadLayer(repo, m.Config.Digest)
 			if err != nil {
 				return "", normalizeErr(repo, release, err)
