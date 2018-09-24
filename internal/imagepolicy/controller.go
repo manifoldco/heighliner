@@ -3,14 +3,15 @@ package imagepolicy
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"github.com/manifoldco/heighliner/apis/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/registry"
-	"github.com/manifoldco/heighliner/internal/registry/hub"
 
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
@@ -22,6 +23,28 @@ import (
 	"k8s.io/client-go/tools/cache"
 	cmdutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 )
+
+var (
+	registriesMu sync.RWMutex
+	registries   = make(map[string]registryGetter)
+)
+
+type registryGetter func(*corev1.Secret) (registry.Registry, error)
+
+// AddRegistry allows a container registry to register itself as a possible
+// option to retrieve images. If the func getter is nil or the same registry
+// name has been used, the function panics.
+func AddRegistry(name string, r registryGetter) {
+	registriesMu.Lock()
+	defer registriesMu.Unlock()
+	if r == nil {
+		panic("registry getter is nil")
+	}
+	if _, dup := registries[name]; dup {
+		panic("register called twice for " + name)
+	}
+	registries[name] = r
+}
 
 type (
 	getClient interface {
@@ -45,6 +68,7 @@ type Controller struct {
 	cs        kubernetes.Interface
 	patcher   patchClient
 	namespace string
+	logger    *log.Logger
 }
 
 // NewController returns a new ImagePolicy Controller.
@@ -59,6 +83,7 @@ func NewController(rcfg *rest.Config, cs kubernetes.Interface, namespace string)
 		rc:        rc,
 		patcher:   patcher.New("hlnr-image-policy", cmdutil.NewFactory(nil)),
 		namespace: namespace,
+		logger:    log.New(os.Stderr, "", log.LstdFlags),
 	}, nil
 }
 
@@ -67,7 +92,7 @@ func NewController(rcfg *rest.Config, cs kubernetes.Interface, namespace string)
 func (c *Controller) Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	log.Printf("Starting controller...")
+	c.logger.Printf("Starting controller...")
 
 	go c.run(ctx)
 
@@ -75,11 +100,11 @@ func (c *Controller) Run() error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	<-quit
-	log.Printf("Shutdown requested...")
+	c.logger.Printf("Shutdown requested...")
 	cancel()
 
 	<-ctx.Done()
-	log.Printf("Shutting down...")
+	c.logger.Printf("Shutting down...")
 
 	return nil
 }
@@ -98,7 +123,7 @@ func (c *Controller) run(ctx context.Context) {
 			},
 			DeleteFunc: func(obj interface{}) {
 				cp := obj.(*v1alpha1.ImagePolicy).DeepCopy()
-				log.Printf("Deleting ImagePolicy %s", cp.Name)
+				c.logger.Printf("Deleting ImagePolicy %s", cp.Name)
 			},
 		},
 	)
@@ -109,28 +134,27 @@ func (c *Controller) run(ctx context.Context) {
 func (c *Controller) syncPolicy(obj interface{}) error {
 	ip := obj.(*v1alpha1.ImagePolicy).DeepCopy()
 
-	// TODO: make this generic for various filters. Gitlab etc.
 	repo, err := getGithubRepository(c.patcher, ip)
 	if err != nil {
-		log.Printf("Could not retrieve GithubRepository for %s: %s", ip.Name, err)
+		c.logger.Printf("Could not retrieve GithubRepository for %s: %s", ip.Name, err)
 		return nil
 	}
 
 	registry, err := getRegistry(c.patcher, ip)
 	if err != nil {
-		log.Printf("Could not retrieve registry for %s: %s", ip.Name, err)
+		c.logger.Printf("Could not retrieve registry for %s: %s", ip.Name, err)
 		return nil
 	}
 
 	vp, err := getVersioningPolicy(c.patcher, ip)
 	if err != nil {
-		log.Printf("Could not retrieve VersioningPolicy for %s: %s", ip.Name, err)
+		c.logger.Printf("Could not retrieve VersioningPolicy for %s: %s", ip.Name, err)
 		return nil
 	}
 
 	ip.Status.Releases, err = filterImages(ip.Spec.Image, ip.Spec.Match, repo, registry, vp)
 	if err != nil {
-		log.Printf("Could not filter images for %s: %s", ip.Name, err)
+		c.logger.Printf("Could not filter images for %s: %s", ip.Name, err)
 		return nil
 	}
 
@@ -141,7 +165,7 @@ func (c *Controller) syncPolicy(obj interface{}) error {
 	}
 
 	if _, err := c.patcher.Apply(ip); err != nil {
-		log.Printf("Error syncing ImagePolicy %s (%s): %s", ip.Name, ip.Namespace, err)
+		c.logger.Printf("Error syncing ImagePolicy %s (%s): %s", ip.Name, ip.Namespace, err)
 		return err
 	}
 
@@ -171,11 +195,15 @@ func getGithubRepository(cl patchClient, ip *v1alpha1.ImagePolicy) (*v1alpha1.Gi
 
 func getRegistry(cl patchClient, ip *v1alpha1.ImagePolicy) (registry.Registry, error) {
 
-	pullSecrets := ip.Spec.ImagePullSecrets
+	var pullSecrets []corev1.LocalObjectReference
+	if ip.Spec.ContainerRegistry != nil {
+		pullSecrets = ip.Spec.ContainerRegistry.ImagePullSecrets
+	}
+
 	if len(pullSecrets) == 0 {
 		return nil, errors.New("No ImagePullSecrets available")
 	}
-	registrySecrets := ip.Spec.ImagePullSecrets[0].Name
+	registrySecrets := ip.Spec.ContainerRegistry.ImagePullSecrets[0].Name
 
 	secret := &corev1.Secret{
 		TypeMeta: metav1.TypeMeta{
@@ -188,12 +216,16 @@ func getRegistry(cl patchClient, ip *v1alpha1.ImagePolicy) (registry.Registry, e
 		return nil, err
 	}
 
-	registryClient, err := hub.New(secret) // TODO: make this generic to multiple container registries
-	if err != nil {
-		return nil, err
+	name := ip.Spec.ContainerRegistry.Registry()
+	registriesMu.RLock()
+	getter, ok := registries[name]
+	registriesMu.RUnlock()
+
+	if !ok {
+		return nil, fmt.Errorf("unknown %s registry", name)
 	}
 
-	return registryClient, nil
+	return getter(secret)
 }
 
 func getVersioningPolicy(cl patchClient, ip *v1alpha1.ImagePolicy) (*v1alpha1.VersioningPolicy, error) {

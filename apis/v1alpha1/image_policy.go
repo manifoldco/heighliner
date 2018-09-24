@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/manifoldco/heighliner/internal/k8sutils"
 	"k8s.io/api/core/v1"
 	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +16,10 @@ const defaultMatch = "{{.Tag}}"
 
 var defaultImagePolicyMatch = &ImagePolicyMatch{
 	Name: &ImagePolicyMatchMapping{},
+}
+
+var defaultContainerRegistry = &ContainerRegistry{
+	Name: "docker",
 }
 
 var (
@@ -43,12 +48,12 @@ type ImagePolicyList struct {
 
 // ImagePolicySpec describes the specification for Image.
 type ImagePolicySpec struct {
-	Image            string                    `json:"image"`
-	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets"`
-	ImagePullPolicy  *v1.PullPolicy            `json:"imagePullPolicy"`
-	VersioningPolicy v1.ObjectReference        `json:"versioningPolicy"`
-	Filter           ImagePolicyFilter         `json:"filter"`
-	Match            *ImagePolicyMatch         `json:"match,omitempty"`
+	Image             string             `json:"image"`
+	ImagePullPolicy   *v1.PullPolicy     `json:"imagePullPolicy"`
+	VersioningPolicy  v1.ObjectReference `json:"versioningPolicy"`
+	Filter            ImagePolicyFilter  `json:"filter"`
+	Match             *ImagePolicyMatch  `json:"match,omitempty"`
+	ContainerRegistry *ContainerRegistry `json:"containerRegistry,omitempty"`
 }
 
 // ImagePolicyStatus represents the latest version of the ImagePolicy that
@@ -204,6 +209,27 @@ type ImagePolicyFilter struct {
 	GitHub *v1.ObjectReference `json:"github,omitempty"`
 }
 
+// ContainerRegistry will define how to fetch images from a container registry.
+// Docker Hub is the only one supported at the moment.
+type ContainerRegistry struct {
+	Name             string                    `json:"name"`
+	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets"`
+}
+
+// Registry returns the name of the container registry. If nil, returns the
+// default value.
+func (c *ContainerRegistry) Registry() string {
+	if c == nil {
+		c = defaultContainerRegistry
+	}
+
+	if c.Name == "" {
+		return defaultContainerRegistry.Name
+	}
+
+	return c.Name
+}
+
 // ImagePolicyValidationSchema represents the OpenAPIV3Schema validation for
 // the NetworkPolicy CRD.
 var ImagePolicyValidationSchema = &v1beta1.CustomResourceValidation{
@@ -213,8 +239,9 @@ var ImagePolicyValidationSchema = &v1beta1.CustomResourceValidation{
 			"spec": {
 				Required: []string{"image", "versioningPolicy", "filter"},
 				Properties: map[string]v1beta1.JSONSchemaProps{
-					"filter": filterValidationSchema,
-					"match":  matchValidationSchema,
+					"filter":            filterValidationSchema,
+					"match":             matchValidationSchema,
+					"containerRegistry": containerRegistryValidationSchema,
 				},
 			},
 			"status": ReleaseValidationSchema,
@@ -245,5 +272,16 @@ var mappingValidationSchema = v1beta1.JSONSchemaProps{
 	Properties: map[string]v1beta1.JSONSchemaProps{
 		"from": {Type: "string"},
 		"to":   {Type: "string"},
+	},
+}
+
+var containerRegistryValidationSchema = v1beta1.JSONSchemaProps{
+	Type: "object",
+	Properties: map[string]v1beta1.JSONSchemaProps{
+		"name": {
+			Enum: []v1beta1.JSON{
+				{Raw: k8sutils.JSONBytes("docker")},
+			},
+		},
 	},
 }

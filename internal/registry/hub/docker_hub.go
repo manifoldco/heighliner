@@ -15,8 +15,20 @@ import (
 	"k8s.io/api/core/v1"
 
 	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/internal/imagepolicy"
 	reg "github.com/manifoldco/heighliner/internal/registry"
 )
+
+func init() {
+	imagepolicy.AddRegistry("docker", func(secret *v1.Secret) (reg.Registry, error) {
+		c, err := New(secret)
+		if err != nil {
+			return nil, err
+		}
+
+		return c, nil
+	})
+}
 
 const dockerHubRegistryURL string = "https://registry-1.docker.io"
 

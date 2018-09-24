@@ -7,6 +7,7 @@ import (
 	"github.com/jelmersnoeck/kubekit"
 	flags "github.com/jessevdk/go-flags"
 	"github.com/manifoldco/heighliner/internal/imagepolicy"
+	_ "github.com/manifoldco/heighliner/internal/registry/hub"
 
 	"github.com/spf13/cobra"
 )

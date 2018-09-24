@@ -1,12 +1,228 @@
 package imagepolicy
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"log"
+	"reflect"
 	"testing"
 
+	"github.com/jelmersnoeck/kubekit/patcher"
 	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/internal/registry"
 	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
+
+func TestController_SyncPolicy(t *testing.T) {
+	AddRegistry("mock", func(*v1.Secret) (registry.Registry, error) {
+		return &mockContainerRegistry{}, nil
+	})
+
+	tcs := []struct {
+		scenario string
+		policy   *v1alpha1.ImagePolicy
+		patcher  patchClient
+		log      string
+		err      error
+	}{
+		{
+			scenario: "ok, nothing to apply",
+			policy: &v1alpha1.ImagePolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ip-test",
+				},
+				Spec: v1alpha1.ImagePolicySpec{
+					Filter: v1alpha1.ImagePolicyFilter{
+						GitHub: &v1.ObjectReference{
+							Name:      "manifoldco",
+							Namespace: "websites",
+						},
+					},
+					ContainerRegistry: &v1alpha1.ContainerRegistry{
+						Name: "mock",
+						ImagePullSecrets: []v1.LocalObjectReference{
+							{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			patcher: &mockPatchClient{
+				GetFn: func(v interface{}, ns, name string) error {
+					return nil
+				},
+				ApplyFn: func(runtime.Object, ...patcher.OptionFunc) ([]byte, error) {
+					return nil, nil
+				},
+			},
+		},
+		{
+			scenario: "when github repo fails",
+			policy: &v1alpha1.ImagePolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ip-test",
+				},
+				Spec: v1alpha1.ImagePolicySpec{
+					Filter: v1alpha1.ImagePolicyFilter{
+						GitHub: &v1.ObjectReference{
+							Name:      "manifoldco",
+							Namespace: "websites",
+						},
+					},
+				},
+			},
+			patcher: &mockPatchClient{
+				GetFn: func(v interface{}, ns, name string) error {
+					return errors.New("github repo not found")
+				},
+			},
+			log: "Could not retrieve GithubRepository for ip-test: github repo not found\n",
+		},
+		{
+			scenario: "when container registry secrets are not present",
+			policy: &v1alpha1.ImagePolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ip-test",
+				},
+				Spec: v1alpha1.ImagePolicySpec{
+					Filter: v1alpha1.ImagePolicyFilter{
+						GitHub: &v1.ObjectReference{
+							Name:      "manifoldco",
+							Namespace: "websites",
+						},
+					},
+				},
+			},
+			patcher: &mockPatchClient{
+				GetFn: func(v interface{}, ns, name string) error {
+					return nil
+				},
+			},
+			log: "Could not retrieve registry for ip-test: No ImagePullSecrets available\n",
+		},
+		{
+			scenario: "when default container registry fails",
+			policy: &v1alpha1.ImagePolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ip-test",
+				},
+				Spec: v1alpha1.ImagePolicySpec{
+					Filter: v1alpha1.ImagePolicyFilter{
+						GitHub: &v1.ObjectReference{
+							Name:      "manifoldco",
+							Namespace: "websites",
+						},
+					},
+					ContainerRegistry: &v1alpha1.ContainerRegistry{
+						ImagePullSecrets: []v1.LocalObjectReference{
+							{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			patcher: &mockPatchClient{
+				GetFn: func(v interface{}, ns, name string) error {
+					return nil
+				},
+			},
+			log: "Could not retrieve registry for ip-test: unknown docker registry\n",
+		},
+		{
+			scenario: "when custom container registry fails",
+			policy: &v1alpha1.ImagePolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ip-test",
+				},
+				Spec: v1alpha1.ImagePolicySpec{
+					Filter: v1alpha1.ImagePolicyFilter{
+						GitHub: &v1.ObjectReference{
+							Name:      "manifoldco",
+							Namespace: "websites",
+						},
+					},
+					ContainerRegistry: &v1alpha1.ContainerRegistry{
+						Name: "azure",
+						ImagePullSecrets: []v1.LocalObjectReference{
+							{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			patcher: &mockPatchClient{
+				GetFn: func(v interface{}, ns, name string) error {
+					return nil
+				},
+			},
+			log: "Could not retrieve registry for ip-test: unknown azure registry\n",
+		},
+		{
+			scenario: "when applying new policy fails",
+			policy: &v1alpha1.ImagePolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ip-test",
+				},
+				Spec: v1alpha1.ImagePolicySpec{
+					Filter: v1alpha1.ImagePolicyFilter{
+						GitHub: &v1.ObjectReference{
+							Name:      "manifoldco",
+							Namespace: "websites",
+						},
+					},
+					ContainerRegistry: &v1alpha1.ContainerRegistry{
+						Name: "mock",
+						ImagePullSecrets: []v1.LocalObjectReference{
+							{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			patcher: &mockPatchClient{
+				GetFn: func(v interface{}, ns, name string) error {
+					return nil
+				},
+				ApplyFn: func(runtime.Object, ...patcher.OptionFunc) ([]byte, error) {
+					return nil, errors.New("failed to patch")
+				},
+			},
+			err: errors.New("failed to patch"),
+			log: "Error syncing ImagePolicy ip-test (): failed to patch\n",
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.scenario, func(t *testing.T) {
+			var buf bytes.Buffer
+
+			c := &Controller{
+				patcher: tc.patcher,
+				logger:  log.New(&buf, "", 0),
+			}
+
+			err := c.syncPolicy(tc.policy)
+
+			if !reflect.DeepEqual(tc.err, err) {
+				t.Fatalf("expected error to eq %v got %v", tc.err, err)
+			}
+
+			log := buf.String()
+
+			if tc.log != log {
+				t.Fatalf("expected log message to eq %q got %q", tc.log, log)
+			}
+
+		})
+	}
+}
 
 func TestFilterImages(t *testing.T) {
 
@@ -93,4 +309,23 @@ type mockRegistryClient struct{}
 
 func (c *mockRegistryClient) TagFor(image string, tag string, matcher *v1alpha1.ImagePolicyMatch) (string, error) {
 	return tag, nil
+}
+
+type mockPatchClient struct {
+	GetFn   func(interface{}, string, string) error
+	ApplyFn func(runtime.Object, ...patcher.OptionFunc) ([]byte, error)
+}
+
+func (p *mockPatchClient) Get(v interface{}, ns string, name string) error {
+	return p.GetFn(v, ns, name)
+}
+
+func (p *mockPatchClient) Apply(obj runtime.Object, opts ...patcher.OptionFunc) ([]byte, error) {
+	return p.ApplyFn(obj, opts...)
+}
+
+type mockContainerRegistry struct{}
+
+func (r *mockContainerRegistry) TagFor(string, string, *v1alpha1.ImagePolicyMatch) (string, error) {
+	return "v0.0.1", nil
 }

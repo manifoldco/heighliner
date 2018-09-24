@@ -199,6 +199,11 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, ip *v1
 	name := release.FullName(crd.Name)
 	labels := meta.MicroserviceLabels(crd, release, crd)
 
+	var secrets []corev1.LocalObjectReference
+	if ip.Spec.ContainerRegistry != nil {
+		secrets = ip.Spec.ContainerRegistry.ImagePullSecrets
+	}
+
 	// TODO(jelmer): currently we need to specify the TypeMeta here. We need to
 	// investigate a way to automate this depending on the passed in Object. The
 	// issue lies within the passed in ClientSet. The ClientSet we've generated
@@ -226,7 +231,7 @@ func (c *Controller) getVersionedMicroservice(crd *v1alpha1.Microservice, ip *v1
 			Config:           configPolicySpec,
 			Security:         securityPolicySpec,
 			Containers:       containers,
-			ImagePullSecrets: ip.Spec.ImagePullSecrets,
+			ImagePullSecrets: secrets,
 		},
 	}, nil
 }
