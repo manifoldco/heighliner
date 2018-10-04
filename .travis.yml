@@ -3,6 +3,7 @@ services:
 - docker
 go:
 - 1.10.x
+- 1.11.x
 before_install:
 - curl -o- https://raw.githubusercontent.com/manifoldco/manifold-cli/master/install.sh
   | bash
