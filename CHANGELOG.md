@@ -44,6 +44,7 @@ spec:
 ### Fixed
 
 - Fixed the Makefile target for generating files.
+- Fixed a bug where the OwnerReference on a Ingress for the Service pointed to the wrong APIGroup.
 
 ## [0.1.2] - 2018-07-16
 
