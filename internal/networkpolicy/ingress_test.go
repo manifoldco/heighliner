@@ -1,8 +1,10 @@
 package networkpolicy
 
 import (
+	"reflect"
 	"testing"
 
+	"github.com/jelmersnoeck/kubekit"
 	"github.com/manifoldco/heighliner/apis/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,12 +53,13 @@ func TestBuildIngressForRelease(t *testing.T) {
 			t.Error("Wrong number of owners:", len(ing.OwnerReferences))
 		}
 
-		if ing.OwnerReferences[0].Name != srv.Name ||
-			ing.OwnerReferences[0].Kind != srv.Kind ||
-			ing.OwnerReferences[0].Controller == nil ||
-			!*ing.OwnerReferences[0].Controller {
+		ownerReference := *metav1.NewControllerRef(
+			srv,
+			corev1.SchemeGroupVersion.WithKind(kubekit.TypeName(srv)),
+		)
 
-			t.Error("Bad OwnerReference seen. got", ing.OwnerReferences)
+		if !reflect.DeepEqual(ing.OwnerReferences[0], ownerReference) {
+			t.Errorf("Bad OwnerReference seen. got\n%#v\n\nwanted\n%#v", ing.OwnerReferences[0], ownerReference)
 		}
 	})
 

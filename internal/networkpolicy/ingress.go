@@ -6,9 +6,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jelmersnoeck/kubekit"
 	"github.com/manifoldco/heighliner/apis/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/meta"
+
+	"github.com/jelmersnoeck/kubekit"
+
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -70,7 +73,7 @@ func buildIngressForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolic
 			OwnerReferences: []metav1.OwnerReference{
 				*metav1.NewControllerRef(
 					srv,
-					v1alpha1.SchemeGroupVersion.WithKind(kubekit.TypeName(srv)),
+					corev1.SchemeGroupVersion.WithKind(kubekit.TypeName(srv)),
 				),
 			},
 		},
