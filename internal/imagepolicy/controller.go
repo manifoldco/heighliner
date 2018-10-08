@@ -134,12 +134,6 @@ func (c *Controller) run(ctx context.Context) {
 func (c *Controller) syncPolicy(obj interface{}) error {
 	ip := obj.(*v1alpha1.ImagePolicy).DeepCopy()
 
-	repo, err := getGithubRepository(c.patcher, ip)
-	if err != nil {
-		c.logger.Printf("Could not retrieve GithubRepository for %s: %s", ip.Name, err)
-		return nil
-	}
-
 	registry, err := getRegistry(c.patcher, ip)
 	if err != nil {
 		c.logger.Printf("Could not retrieve registry for %s: %s", ip.Name, err)
@@ -152,10 +146,32 @@ func (c *Controller) syncPolicy(obj interface{}) error {
 		return nil
 	}
 
-	ip.Status.Releases, err = filterImages(ip.Spec.Image, ip.Spec.Match, repo, registry, vp)
-	if err != nil {
-		c.logger.Printf("Could not filter images for %s: %s", ip.Name, err)
-		return nil
+	switch {
+	case ip.Spec.Filter.GitHub != nil:
+		repo, err := getGithubRepository(c.patcher, ip)
+		if err != nil {
+			c.logger.Printf("Could not retrieve GithubRepository for %s: %s", ip.Name, err)
+			return nil
+		}
+
+		ip.Status.Releases, err = filterImages(ip.Spec.Image, ip.Spec.Match, repo, registry, vp)
+		if err != nil {
+			c.logger.Printf("Could not filter images for %s: %s", ip.Name, err)
+			return nil
+		}
+
+	case ip.Spec.Filter.Pinned != nil:
+		pinned := ip.Spec.Filter.Pinned
+
+		r := v1alpha1.Release{
+			SemVer: pinned,
+			Level:  vp.Spec.SemVer.Level,
+			Image:  ip.Spec.Image + ":" + pinned.Version,
+		}
+
+		ip.Status.Releases = []v1alpha1.Release{r}
+	default:
+		return errors.New("image spec filter not defined")
 	}
 
 	// need to specify types again until we resolve the mapping issue

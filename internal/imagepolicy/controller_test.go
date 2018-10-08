@@ -61,6 +61,76 @@ func TestController_SyncPolicy(t *testing.T) {
 			},
 		},
 		{
+			scenario: "when using a pinned version",
+			policy: &v1alpha1.ImagePolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ip-test",
+				},
+				Spec: v1alpha1.ImagePolicySpec{
+					Filter: v1alpha1.ImagePolicyFilter{
+						Pinned: &v1alpha1.SemVerRelease{
+							Version: "1.2.3",
+						},
+					},
+					VersioningPolicy: v1.ObjectReference{
+						Namespace: "vp",
+					},
+					ContainerRegistry: &v1alpha1.ContainerRegistry{
+						Name: "mock",
+						ImagePullSecrets: []v1.LocalObjectReference{
+							{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			patcher: &mockPatchClient{
+				GetFn: func(v interface{}, ns, name string) error {
+					if ns == "vp" {
+						vp := v.(*v1alpha1.VersioningPolicy)
+						vp.Spec = v1alpha1.VersioningPolicySpec{
+							SemVer: &v1alpha1.SemVerSource{
+								Level: v1alpha1.SemVerLevelRelease,
+							},
+						}
+
+						return nil
+					}
+
+					return nil
+				},
+				ApplyFn: func(runtime.Object, ...patcher.OptionFunc) ([]byte, error) {
+					return nil, nil
+				},
+			},
+		},
+		{
+			scenario: "when no filter is defined",
+			policy: &v1alpha1.ImagePolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ip-test",
+				},
+				Spec: v1alpha1.ImagePolicySpec{
+					Filter: v1alpha1.ImagePolicyFilter{},
+					ContainerRegistry: &v1alpha1.ContainerRegistry{
+						Name: "mock",
+						ImagePullSecrets: []v1.LocalObjectReference{
+							{
+								Name: "secret",
+							},
+						},
+					},
+				},
+			},
+			patcher: &mockPatchClient{
+				GetFn: func(v interface{}, ns, name string) error {
+					return nil
+				},
+			},
+			err: errors.New("image spec filter not defined"),
+		},
+		{
 			scenario: "when github repo fails",
 			policy: &v1alpha1.ImagePolicy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -73,11 +143,23 @@ func TestController_SyncPolicy(t *testing.T) {
 							Namespace: "websites",
 						},
 					},
+					ContainerRegistry: &v1alpha1.ContainerRegistry{
+						Name: "mock",
+						ImagePullSecrets: []v1.LocalObjectReference{
+							{
+								Name: "secret",
+							},
+						},
+					},
 				},
 			},
 			patcher: &mockPatchClient{
 				GetFn: func(v interface{}, ns, name string) error {
-					return errors.New("github repo not found")
+					if ns == "websites" {
+						return errors.New("github repo not found")
+					}
+
+					return nil
 				},
 			},
 			log: "Could not retrieve GithubRepository for ip-test: github repo not found\n",

@@ -207,6 +207,7 @@ func (m *ImagePolicyMatchMapping) Map(from string) (string, error) {
 // ImagePolicyFilter will define how we can filter where images come from
 type ImagePolicyFilter struct {
 	GitHub *v1.ObjectReference `json:"github,omitempty"`
+	Pinned *SemVerRelease      `json:"pinned,omitempty"`
 }
 
 // ContainerRegistry will define how to fetch images from a container registry.
@@ -253,6 +254,19 @@ var filterValidationSchema = v1beta1.JSONSchemaProps{
 	OneOf: []v1beta1.JSONSchemaProps{
 		{
 			Required: []string{"github"},
+		},
+		{
+			Required: []string{"pinned"},
+			Properties: map[string]v1beta1.JSONSchemaProps{
+				"pinned": {
+					Required: []string{"version"},
+					Properties: map[string]v1beta1.JSONSchemaProps{
+						"version": {
+							Type: "string",
+						},
+					},
+				},
+			},
 		},
 	},
 }
