@@ -21,7 +21,7 @@ import (
 )
 
 // Controller represents the VersionedMicroserviceController. This controller
-// takes care of creating, updating and deleting lower level Kubernetese
+// takes care of creating, updating and deleting lower level Kubernetes
 // components that are associated with a specific VersionedMicroservice.
 type Controller struct {
 	rc        *rest.RESTClient

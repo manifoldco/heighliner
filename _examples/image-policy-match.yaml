@@ -49,7 +49,7 @@ spec:
 
 ---
 
-# This configuration uses label matching. You can match on any number of lables,
+# This configuration uses label matching. You can match on any number of labels,
 # with or without name. If a given label does not exist on a container image,
 # it will not match.
 #

@@ -3,7 +3,7 @@
 # Mounts through the ConfigPolicy.
 #
 # The ConfigPolicy will be monitored for changes, once changes are detected in
-# the configuration or the values of the confniguration (envs), a new deployment
+# the configuration or the values of the configuration (envs), a new deployment
 # for the Microservices which reference this ConfigPolicy will be created.
 apiVersion: hlnr.io/v1alpha1
 kind: ConfigPolicy

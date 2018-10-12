@@ -43,7 +43,7 @@ For a full installation process, have a look at the [installation docs](docs/ins
 Ensure that you have an API token installed in your cluster. Follow our [how to](docs/design/github-connector.md#APIToken)
 for further instructions.
 
-The GitHub repository resource is used to syncronize releases and pull requests
+The GitHub repository resource is used to synchronize releases and pull requests
 with cluster state, and update pull requests with deployment status.
 
 ```yaml
@@ -76,7 +76,7 @@ spec:
 
 ### Configure an Image Policy
 
-The image policy resource syncronizes Docker container images with cluster
+The image policy resource synchronizes Docker container images with cluster
 state. It cross references with GitHub releases, filtering out images that do
 not match the versioning policy.
 
@@ -143,5 +143,5 @@ Thanks for taking the time to join the community and helping out!
 
 - Please familiarize yourself with the [Code of Conduct](./CODE_OF_CONDUCT.md)
   before contributing.
-- Look at our [Contributing Guidelines](./CONTRIBUTING.md) for more infirmation
+- Look at our [Contributing Guidelines](./CONTRIBUTING.md) for more information
   about setting up your environment and how to contribute.

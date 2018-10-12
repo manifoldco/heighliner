@@ -8,7 +8,7 @@ from. The ImagePolicy is then responsible for validating that the desired images
 are available in the linked registry.
 
 ImagePolicies can optionally define a match configuration. Match is used to
-control how GitHub releases map to container registry images. By defaut, the
+control how GitHub releases map to container registry images. By default, the
 release name is directly mapped to an image tag name. You can use `from` and
 `to` values to do pattern matching on the GitHub release, and templating to
 match container image tags. You can also define container image labels to match

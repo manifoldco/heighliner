@@ -1,4 +1,4 @@
-#  This secret is your GH API ACCESS token set up with premissions according to [/docs/design/github-connector.md](/docs/design/github-connector.md)
+#  This secret is your GH API ACCESS token set up with permissions according to [/docs/design/github-connector.md](/docs/design/github-connector.md)
 apiVersion: v1
 kind: Secret
 metadata:

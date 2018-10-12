@@ -6,7 +6,7 @@ have been opened.
 
 To do this, there is a CRD installed which allows you to specify a repository
 and credentials to connect to this repository. The connector will configure the
-appropiate webhooks with this repository to get callback information based on
+appropriate webhooks with this repository to get callback information based on
 Release and PullRequest events.
 
 The connector also takes care of setting up a callback server, allowing GitHub
