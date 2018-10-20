@@ -11,13 +11,12 @@ import (
 	"time"
 
 	"github.com/google/go-github/github"
+	"github.com/jelmersnoeck/kubekit"
+	"github.com/jelmersnoeck/kubekit/patcher"
 	"github.com/manifoldco/heighliner/apis/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/k8sutils"
 	"github.com/manifoldco/heighliner/internal/networkpolicy"
 	"golang.org/x/oauth2"
-
-	"github.com/jelmersnoeck/kubekit"
-	"github.com/jelmersnoeck/kubekit/patcher"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -87,6 +86,8 @@ func (c *Controller) Run() error {
 	go srv.start(c.cfg.CallbackPort)
 
 	log.Printf("Starting controller...")
+
+	log.Printf("Watching for GitHub changes every %s", c.cfg.ReconciliationPeriod)
 
 	go c.run(ctx)
 
@@ -183,27 +184,36 @@ func (c *Controller) deleteHooks(obj interface{}) error {
 func (c *Controller) syncPolicy(obj interface{}) error {
 	ghp := obj.(*v1alpha1.GitHubRepository).DeepCopy()
 
+	ctx := context.Background()
+
+	ghClient, err := getGitHubClient(ctx, c.patcher, ghp.Namespace, ghp.Spec.ConfigSecret.Name)
+	if err != nil {
+		log.Printf("Could not create GitHub cleint for %s (%s): %s", ghp.Spec.Slug(), ghp.Namespace, err)
+		return err
+	}
+
 	hook, err := c.ensureHooks(c.patcher, ghp, c.cfg)
 	if err != nil {
 		log.Printf("Could not ensure GitHub hooks for %s (%s): %s", ghp.Spec.Slug(), ghp.Namespace, err)
 		return err
 	}
 
-	wh := ghp.Status.Webhook
-	if wh != nil && wh.ID != nil && *wh.ID == *hook.ID && wh.Secret == hook.Secret {
-		// no change needed
-		return nil
+	rc := githubReconciliationClient{Client: ghClient}
+	err = reconciliateRepository(ctx, &rc, ghp, c.cfg.ReconciliationPeriod)
+	if err != nil {
+		log.Printf("Could sync GitHub repo for %s (%s): %s", ghp.Spec.Slug(), ghp.Namespace, err)
+		return err
+	}
+
+	ghp.Status.Webhook = &v1alpha1.GitHubHook{
+		ID:     hook.ID,
+		Secret: hook.Secret,
 	}
 
 	// need to specify types again until we resolve the mapping issue
 	ghp.TypeMeta = metav1.TypeMeta{
 		Kind:       "GitHubRepository",
 		APIVersion: "hlnr.io/v1alpha1",
-	}
-
-	ghp.Status.Webhook = &v1alpha1.GitHubHook{
-		ID:     hook.ID,
-		Secret: hook.Secret,
 	}
 
 	// update the status

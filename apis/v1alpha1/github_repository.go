@@ -59,6 +59,9 @@ type GitHubRepositoryStatus struct {
 	// Webhook represents the installed Webhook information for the GitHub
 	// Repository.
 	Webhook *GitHubHook `json:"webhook"`
+
+	// Reconciliation represents the status of the repository reconciliation.
+	Reconciliation GitHubReconciliation `json:"reconciliation"`
 }
 
 // GitHubHook represents the status object for a GiHub Webhook for the CRD.
@@ -78,6 +81,11 @@ type GitHubRelease struct {
 	Level       SemVerLevel `json:"level"`
 	ReleaseTime metav1.Time `json:"releaseTime"`
 	Deployment  *Deployment `json:"deployment,omitempty"`
+}
+
+// GitHubReconciliation represents the status of the repository reconciliation.
+type GitHubReconciliation struct {
+	LastUpdate *metav1.Time `json:"last_update"`
 }
 
 // Deployment represents a linking between a GitHub deployment and a network

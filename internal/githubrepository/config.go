@@ -1,12 +1,16 @@
 package githubrepository
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Config is the configuration required to start the GitHub Controller.
 type Config struct {
-	Domain       string
-	InsecureSSL  bool
-	CallbackPort string
+	Domain               string
+	InsecureSSL          bool
+	CallbackPort         string
+	ReconciliationPeriod time.Duration
 }
 
 // PayloadURL is returns the fully qualified URL used to do payload callbacks to.

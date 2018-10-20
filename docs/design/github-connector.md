@@ -13,6 +13,11 @@ The connector also takes care of setting up a callback server, allowing GitHub
 to send these events to the cluster. Once a new Release or PullRequest is
 detected, it will be stored accordingly to the associated GitHub Repository CRD.
 
+GitHub webhooks are not retried in case of failure, to mitigate any synchronization
+problems, the connector tries to reconciliate its known releases with GitHub's list
+of releases and opened pull requests every 10 minutes. This period can be configured
+with the flag `--reconciliation-period`.
+
 Lastly, the connector also monitors the NetworkPolicies. These policies indicate
 which Microservices have associated releases. If these releases are Preview
 releases, the connector will create Deployment objects and link the generated
