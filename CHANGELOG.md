@@ -40,6 +40,7 @@ spec:
 - Added logging to indicate GH Callback Server requests.
 - Added `ImagePolicy.Spec.ContainerRegistry` to specify which container registry
   to pull the image from.
+- Added GitHub reconciliation period. [Read More](docs/design/github-connector.md)
 
 ### Fixed
 
