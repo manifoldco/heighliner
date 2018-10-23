@@ -1,7 +1,7 @@
 PKG=github.com/manifoldco/heighliner
 API_VERSIONS=$(sort $(patsubst apis/%/,%,$(dir $(wildcard apis/*/))))
 
-ci: lint cover release
+ci: lint cover
 .PHONY: ci
 
 #################################################
