@@ -37,7 +37,7 @@ LINTERS=\
 	misspell \
 	ineffassign \
 	deadcode
-METALINT=gometalinter --tests --disable-all --vendor --deadline=5m -e "zz_.*\.go" \
+METALINT=gometalinter --tests --disable-all --vendor --deadline=5m -e ".*generated.*" \
 	 ./... --enable
 
 test: vendor
