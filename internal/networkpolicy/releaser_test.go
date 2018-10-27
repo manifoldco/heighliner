@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/heighliner/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

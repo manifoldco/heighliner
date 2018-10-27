@@ -15,7 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/jelmersnoeck/kubekit/patcher"
-	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/heighliner/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/tester"
 )
 

@@ -3,7 +3,7 @@ package networkpolicy
 import (
 	"fmt"
 
-	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/heighliner/v1alpha1"
 )
 
 func buildNetworkStatusDomainsForRelease(ms *v1alpha1.Microservice, np *v1alpha1.NetworkPolicy, release *v1alpha1.Release) ([]v1alpha1.Domain, error) {

@@ -16,7 +16,7 @@ import (
 	digest "github.com/opencontainers/go-digest"
 	"k8s.io/api/core/v1"
 
-	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/heighliner/v1alpha1"
 	reg "github.com/manifoldco/heighliner/internal/registry"
 )
 

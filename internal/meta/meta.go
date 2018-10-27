@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/heighliner/v1alpha1"
 )
 
 // Annotations returns a set of annotations annotated with the Heighliner

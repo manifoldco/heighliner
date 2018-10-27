@@ -13,7 +13,7 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/jelmersnoeck/kubekit"
 	"github.com/jelmersnoeck/kubekit/patcher"
-	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/heighliner/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/k8sutils"
 	"github.com/manifoldco/heighliner/internal/networkpolicy"
 	"golang.org/x/oauth2"

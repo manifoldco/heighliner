@@ -10,7 +10,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/heighliner/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/registry"
 
 	"github.com/jelmersnoeck/kubekit"

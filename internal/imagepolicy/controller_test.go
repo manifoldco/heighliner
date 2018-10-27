@@ -8,9 +8,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/jelmersnoeck/kubekit/patcher"
-	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/heighliner/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/registry"
+
+	"github.com/jelmersnoeck/kubekit/patcher"
+
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

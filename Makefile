@@ -59,25 +59,29 @@ $(LINTERS): vendor
 .PHONY: $(LINTERS) test lint
 
 #################################################
-# Create generated files
+# Code Generation
 #################################################
-GENERATED_FILES=$(API_VERSIONS:%=apis/%/zz_generated.go)
-
-deepcopy-gen:
-	go get -u k8s.io/code-generator/cmd/deepcopy-gen
+APIS=$(sort $(patsubst apis/%/,%,$(dir $(wildcard apis/*/*/))))
 
 api-versions:
-	@echo $(API_VERSIONS)
+	@echo $(APIS)
 
-$(GENERATED_FILES):
-	deepcopy-gen -v=5 -h boilerplate.go.txt -i $(PKG)/$(patsubst %/zz_generated.go,%,$@) -O zz_generated
+$(APIS): vendor
+	./vendor/k8s.io/code-generator/generate-groups.sh \
+	  all \
+	  $(PKG)/pkg/client/generated \
+	  $(PKG)/apis \
+	  $(subst /,:,$@) \
+	  --go-header-file boilerplate.go.txt \
+	  $@
 
-bindata:
-	go-bindata -o cmd/heighliner/zz_generated_data.go docs/kube/
+clean-generated:
+	rm -rf ./pkg/client/generated
 
-generated: $(GENERATED_FILES) bindata
+generated: clean-generated $(APIS)
 
-.PHONY: $(GENERATED_FILES)
+check-generated: generated
+	@(git diff --exit-code . || (echo "Generated files are outdated" && exit 1))
 
 #################################################
 # Building

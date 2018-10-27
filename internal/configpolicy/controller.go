@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/manifoldco/heighliner/apis/v1alpha1"
+	"github.com/manifoldco/heighliner/apis/heighliner/v1alpha1"
 	"github.com/manifoldco/heighliner/internal/k8sutils"
 
 	"github.com/jelmersnoeck/kubekit"
