@@ -18,18 +18,18 @@ branches:
   - master
   - "/^v([0-9]+)\\.([0-9]+)\\.([0-9]+)(?:\\-(rc\\.[0-9]+)*)?$/"
 script:
-- manifold run -- make ci
+- make ci
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 deploy:
 - provider: script
-  script: make release
+  script: manifold run -- make release
   skip_cleanup: true
   on:
     branch: master
     repo: manifoldco/heighliner
 - provider: script
-  script: make release
+  script: manifold run -- make release
   skip_cleanup: true
   on:
     tags: true
