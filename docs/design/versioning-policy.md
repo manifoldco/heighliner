@@ -17,7 +17,7 @@ form of `v1.2.3`.
 
 Release Candidates are used for staging environments. These should be in the
 form off `v1.2.3-rc.0`. This indicates that we can also have multiple release
-candiates for the same release.
+candidates for the same release.
 
 ## Preview
 

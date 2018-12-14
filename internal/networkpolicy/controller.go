@@ -23,7 +23,7 @@ import (
 )
 
 // Controller represents the MicroserviceController. This controller
-// takes care of creating, updating and deleting lower level Kubernetese
+// takes care of creating, updating and deleting lower level Kubernetes
 // components that are associated with a specific Microservice.
 type Controller struct {
 	rc        *rest.RESTClient

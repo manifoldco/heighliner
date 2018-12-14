@@ -15,7 +15,7 @@ import (
 
 var (
 	// ErrMinMaxAvailabilitySet is used when the Availability Configuration has
-	// both MinAvailabe and MaxUnavailable set.
+	// both MinAvailable and MaxUnavailable set.
 	ErrMinMaxAvailabilitySet = errors.New("Can't have both MinAvailable and MaxUnavailable configured")
 )
 
